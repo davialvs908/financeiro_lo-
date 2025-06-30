@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Gestor Financeiro</title>
+    <title>Meu Gestor Financeiro (Local)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Biblioteca para simular o SQLite no browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-asm.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -19,21 +21,44 @@
         .swal2-popup {
             border-radius: 1rem;
         }
+        #login-screen, #app-screen {
+            display: none; /* Começam escondidos */
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div class="container mx-auto p-4 max-w-2xl">
+    <!-- Tela de Login Local -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-sm w-full bg-white p-8 rounded-2xl shadow-lg">
+            <h2 class="text-center text-3xl font-bold text-blue-600 mb-2">Bem-vindo!</h2>
+            <p class="text-center text-gray-500 mb-8">Crie ou acesse seu perfil local.</p>
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Nome do Perfil</label>
+                <input type="text" id="username" placeholder="Ex: Pessoal" class="w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <button id="login-btn" class="w-full mt-6 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Acessar Perfil</button>
+        </div>
+    </div>
+
+    <!-- Tela Principal do App -->
+    <div id="app-screen" class="container mx-auto p-2 sm:p-4 max-w-2xl">
         <header class="text-center mb-6">
-            <h1 class="text-4xl font-bold text-blue-600">Meu Gestor Financeiro</h1>
-            <p class="text-gray-500 mt-2">Seu controle financeiro na palma da mão.</p>
+             <div class="flex justify-between items-center">
+                <button id="logout-btn" class="text-red-500 hover:text-red-700 p-2" title="Trocar Perfil">
+                    <i class="fas fa-sign-out-alt fa-lg"></i>
+                </button>
+                <h1 class="text-2xl sm:text-4xl font-bold text-blue-600">Meu Gestor Financeiro</h1>
+                <div class="w-10"></div> <!-- placeholder -->
+            </div>
+            <p id="user-display" class="text-gray-500 mt-2">Perfil: </p>
         </header>
 
         <!-- Resumo Financeiro -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 text-center">
             <div>
                 <h2 class="text-sm font-medium text-gray-500">Saldo do Mês</h2>
-                <p id="monthly-balance" class="text-2xl font-semibold text-blue-600 mt-1">R$ 0,00</p>
+                <p id="monthly-balance" class="text-xl sm:text-2xl font-semibold text-blue-600 mt-1">R$ 0,00</p>
             </div>
             <div class="space-y-2">
                 <div class="flex justify-center items-center gap-2">
@@ -42,7 +67,7 @@
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
-                <p id="monthly-income" class="text-2xl font-semibold text-green-500">R$ 0,00</p>
+                <p id="monthly-income" class="text-xl sm:text-2xl font-semibold text-green-500">R$ 0,00</p>
                  <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div id="income-goal-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 0%;"></div>
                 </div>
@@ -52,7 +77,7 @@
                  <div class="flex justify-center items-center gap-2">
                     <h2 class="text-sm font-medium text-gray-500">Despesas do Mês</h2>
                 </div>
-                <p id="monthly-expense" class="text-2xl font-semibold text-red-500">R$ 0,00</p>
+                <p id="monthly-expense" class="text-xl sm:text-2xl font-semibold text-red-500">R$ 0,00</p>
                  <div class="w-full bg-gray-200 rounded-full h-2.5">
                     <div id="spending-bar-preview" class="bg-red-500 h-2.5 rounded-full" style="width: 0%;"></div>
                 </div>
@@ -61,10 +86,10 @@
         </div>
 
         <!-- Limite de Gastos -->
-        <div class="bg-white p-6 rounded-2xl shadow-lg mb-6">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-lg font-semibold">Acompanhamento do Limite de Gastos</h2>
-                <button id="edit-limit-btn" class="text-blue-500 hover:text-blue-700">
+                <button id="edit-limit-btn" class="text-blue-500 hover:text-blue-700 p-2">
                     <i class="fas fa-edit"></i>
                 </button>
             </div>
@@ -80,12 +105,12 @@
         <!-- Abas -->
         <div class="mb-6">
             <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-2 sm:space-x-6 overflow-x-auto">
+                <nav class="-mb-px flex justify-center sm:justify-start space-x-2 sm:space-x-4 overflow-x-auto whitespace-nowrap pb-1">
                     <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500 active" data-tab="transactions">
                         <i class="fas fa-exchange-alt mr-2"></i>Transações
                     </button>
                     <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="goals">
-                        <i class="fas fa-tasks mr-2"></i>Metas e Contas
+                        <i class="fas fa-tasks mr-2"></i>Contas
                     </button>
                     <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="reports">
                         <i class="fas fa-chart-pie mr-2"></i>Relatórios
@@ -105,9 +130,7 @@
             <!-- Aba de Transações -->
             <div id="transactions-content" class="tab-pane active">
                 <h3 class="text-xl font-semibold mb-4">Histórico do Mês Atual</h3>
-                <div id="transactions-list" class="space-y-3">
-                     <p class="text-center text-gray-500">Nenhuma transação este mês.</p>
-                </div>
+                <div id="transactions-list" class="space-y-3"></div>
             </div>
             
             <!-- Aba de Metas e Contas -->
@@ -118,14 +141,12 @@
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <div id="goals-list" class="space-y-3">
-                     <p class="text-center text-gray-500">Nenhuma conta registrada.</p>
-                </div>
+                <div id="goals-list" class="space-y-3"></div>
             </div>
             
             <!-- Aba de Relatórios -->
             <div id="reports-content" class="tab-pane hidden">
-                 <div class="bg-white p-6 rounded-2xl shadow-lg">
+                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                         <h3 class="text-xl font-semibold">Histórico e Gastos</h3>
                         <div class="flex gap-2 mt-2 sm:mt-0">
@@ -143,7 +164,7 @@
 
             <!-- Aba do Agente IA -->
             <div id="agent-content" class="tab-pane hidden">
-                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
                     <h3 class="text-xl font-semibold mb-4">Agente de Economia</h3>
                     <p class="text-gray-600 mb-4">Defina sua meta de economia mensal e o agente dirá como alcançá-la com base na sua renda e despesas do mês atual.</p>
                     <div class="flex items-center gap-4 mb-4">
@@ -157,7 +178,7 @@
             </div>
 
             <!-- Aba de Adicionar -->
-            <div id="add-content" class="tab-pane hidden bg-white p-6 rounded-2xl shadow-lg">
+            <div id="add-content" class="tab-pane hidden bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
                 <form id="transaction-form">
                     <div class="mb-4">
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
@@ -177,7 +198,6 @@
                             <button type="button" id="manage-categories-btn" class="text-xs text-blue-500 hover:underline">Gerenciar</button>
                         </div>
                         <select id="category" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                            <option value="Outros">Outros</option>
                         </select>
                     </div>
                     <div class="mb-6">
@@ -200,38 +220,25 @@
             </div>
         </div>
         
-        <footer class="text-center mt-8 text-sm text-gray-400">
-            <p>ID do Usuário: <span id="user-id-display"></span></p>
-        </footer>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type="module">
-        // Importações do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Configuração do Firebase (substituído em produção)
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        // Inicialização do Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        let userId = null;
-        let currentMonthTransactions = [];
-        let goals = [];
-        let categories = [{name: 'Outros', isEssential: false}];
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let db;
+        let currentUsername = null;
+        let categories = [];
         let spendingLimit = 1000;
         let incomeGoal = 3000;
         let expenseChart = null;
-        let unsubscribeTransactions = null;
 
-        // Elementos do DOM
+        // --- DOM ELEMENTS ---
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const usernameInput = document.getElementById('username');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userDisplay = document.getElementById('user-display');
         const monthlyBalanceEl = document.getElementById('monthly-balance');
         const monthlyIncomeEl = document.getElementById('monthly-income');
         const monthlyExpenseEl = document.getElementById('monthly-expense');
@@ -247,7 +254,6 @@
         const incomeGoalText = document.getElementById('income-goal-text');
         const spendingBarPreview = document.getElementById('spending-bar-preview');
         const spendingPreviewText = document.getElementById('spending-preview-text');
-        const userIdDisplay = document.getElementById('user-id-display');
         const categorySelect = document.getElementById('category');
         const manageCategoriesBtn = document.getElementById('manage-categories-btn');
         const addGoalBtn = document.getElementById('add-goal-btn');
@@ -259,123 +265,167 @@
         const analyzeSavingsBtn = document.getElementById('analyze-savings-btn');
         const savingsGoalInput = document.getElementById('savings-goal-input');
 
-        // Lógica de Abas
-        const tabs = document.querySelectorAll('.tab-button');
-        const panes = document.querySelectorAll('.tab-pane');
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(item => item.classList.remove('active'));
-                tab.classList.add('active');
-
-                const target = tab.getAttribute('data-tab');
-                panes.forEach(pane => {
-                    pane.classList.toggle('hidden', pane.id !== `${target}-content`);
-                });
-                
-                if (target === 'reports') {
-                    fetchReportData();
+        // --- DATABASE LOGIC (SQL.js) ---
+        async function initDatabase(username) {
+            try {
+                const SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` });
+                const dbKey = `finance_db_${username}`;
+                const savedDb = localStorage.getItem(dbKey);
+                if (savedDb) {
+                    const dbArray = JSON.parse(savedDb);
+                    db = new SQL.Database(new Uint8Array(dbArray));
+                } else {
+                    db = new SQL.Database();
+                    createTables();
                 }
-            });
-        });
-
-        // Autenticação e Carregamento de Dados
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                userIdDisplay.textContent = userId;
-                loadInitialData();
-            } else {
-                await signInAnonymously(auth);
+                currentUsername = username;
+                localStorage.setItem('last_username', username);
+                return true;
+            } catch (err) {
+                console.error("Error initializing database:", err);
+                Swal.fire('Erro', 'Não foi possível carregar o banco de dados local.', 'error');
+                return false;
             }
-        });
-        
-        async function loadInitialData() {
-            populateDateSelectors();
-            await loadSettings();
-            await loadCategories();
-            listenForCurrentMonthTransactions();
-            listenForGoals();
         }
 
-        // --- LÓGICA DE DADOS (Firestore) ---
+        function createTables() {
+            const sql = `
+                CREATE TABLE transactions (id INTEGER PRIMARY KEY, description TEXT, amount REAL, date TEXT, type TEXT, category TEXT);
+                CREATE TABLE goals (id INTEGER PRIMARY KEY, description TEXT, amount REAL, dueDate TEXT, type TEXT, status TEXT);
+                CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);
+                CREATE TABLE categories (name TEXT PRIMARY KEY, isEssential INTEGER);
+            `;
+            db.exec(sql);
+            // Default values
+            db.exec("INSERT INTO settings VALUES ('spendingLimit', '1000'), ('incomeGoal', '3000');");
+            const defaultCategories = [
+                { name: 'Outros', isEssential: 0 }, { name: 'Alimentação', isEssential: 1 },
+                { name: 'Transporte', isEssential: 1 }, { name: 'Moradia', isEssential: 1 },
+                { name: 'Lazer', isEssential: 0 }, { name: 'Salário', isEssential: 0 }
+            ];
+            const stmt = db.prepare("INSERT INTO categories (name, isEssential) VALUES (?, ?)");
+            defaultCategories.forEach(c => stmt.run([c.name, c.isEssential]));
+            stmt.free();
+            saveDatabase();
+        }
 
-        function listenForCurrentMonthTransactions() {
-            if (!userId) return;
+        function saveDatabase() {
+            if (db && currentUsername) {
+                const data = db.export();
+                localStorage.setItem(`finance_db_${currentUsername}`, JSON.stringify(Array.from(data)));
+            }
+        }
+
+        // --- AUTH & INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const lastUser = localStorage.getItem('last_username');
+            if (lastUser) {
+                usernameInput.value = lastUser;
+                login(lastUser);
+            } else {
+                loginScreen.style.display = 'flex';
+            }
+        });
+
+        loginBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (username) {
+                login(username);
+            } else {
+                Swal.fire('Atenção', 'Por favor, insira um nome para o perfil.', 'warning');
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            db = null;
+            currentUsername = null;
+            localStorage.removeItem('last_username');
+            appScreen.style.display = 'none';
+            loginScreen.style.display = 'flex';
+            usernameInput.value = '';
+        });
+
+        async function login(username) {
+            const success = await initDatabase(username);
+            if (success) {
+                loginScreen.style.display = 'none';
+                appScreen.style.display = 'block';
+                userDisplay.textContent = `Perfil: ${username}`;
+                loadInitialData();
+            }
+        }
+
+        function loadInitialData() {
+            populateDateSelectors();
+            loadSettings();
+            loadCategories();
+            updateUI();
+            renderGoals();
+        }
+
+        // --- DATA FUNCTIONS ---
+        function getTransactionsForPeriod(startDate, endDate) {
+            const stmt = db.prepare("SELECT * FROM transactions WHERE date >= :start AND date <= :end ORDER BY date DESC");
+            stmt.bind({ ':start': formatDate(startDate), ':end': formatDate(endDate) });
+            let results = [];
+            while (stmt.step()) results.push(stmt.getAsObject());
+            stmt.free();
+            return results;
+        }
+        
+        function getPendingGoals() {
+            const stmt = db.prepare("SELECT * FROM goals WHERE status = 'pending' ORDER BY dueDate ASC");
+            let results = [];
+            while (stmt.step()) results.push(stmt.getAsObject());
+            stmt.free();
+            return results;
+        }
+
+        function loadCategories() {
+            const stmt = db.prepare("SELECT name, isEssential FROM categories");
+            categories = [];
+            while (stmt.step()) {
+                const row = stmt.get();
+                categories.push({ name: row[0], isEssential: row[1] === 1 });
+            }
+            stmt.free();
+            updateCategorySelect();
+        }
+
+        function saveCategories() {
+            db.exec("DELETE FROM categories");
+            const stmt = db.prepare("INSERT INTO categories (name, isEssential) VALUES (?, ?)");
+            categories.forEach(c => stmt.run([c.name, c.isEssential ? 1 : 0]));
+            stmt.free();
+            saveDatabase();
+            updateCategorySelect();
+        }
+
+        function loadSettings() {
+            const stmt = db.prepare("SELECT key, value FROM settings");
+            while (stmt.step()) {
+                const row = stmt.get();
+                if (row[0] === 'spendingLimit') spendingLimit = parseFloat(row[1]);
+                if (row[0] === 'incomeGoal') incomeGoal = parseFloat(row[1]);
+            }
+            stmt.free();
+        }
+
+        function saveSettings() {
+            const stmt = db.prepare("UPDATE settings SET value = ? WHERE key = ?");
+            stmt.run([spendingLimit.toString(), 'spendingLimit']);
+            stmt.run([incomeGoal.toString(), 'incomeGoal']);
+            stmt.free();
+            saveDatabase();
+        }
+        
+        // --- UI LOGIC ---
+        function updateUI() {
             const today = new Date();
             const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-            const transactionsCol = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
-            const q = query(transactionsCol, where("date", ">=", formatDate(startOfMonth)), where("date", "<=", formatDate(endOfMonth)));
+            const currentMonthTransactions = getTransactionsForPeriod(startOfMonth, endOfMonth);
             
-            if (unsubscribeTransactions) unsubscribeTransactions();
-
-            unsubscribeTransactions = onSnapshot(q, (snapshot) => {
-                currentMonthTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                currentMonthTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-                updateUI();
-            });
-        }
-        
-        function listenForGoals() {
-            if (!userId) return;
-            const goalsCol = collection(db, `artifacts/${appId}/users/${userId}/goals`);
-            const q = query(goalsCol, orderBy("dueDate"));
-            onSnapshot(q, (snapshot) => {
-                goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderGoals();
-            });
-        }
-        
-        async function loadCategories() {
-            if (!userId) return;
-            const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, "categories");
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists() && docSnap.data().list) {
-                categories = docSnap.data().list;
-            } else {
-                 categories = [
-                    { name: 'Outros', isEssential: false },
-                    { name: 'Alimentação', isEssential: true },
-                    { name: 'Transporte', isEssential: true },
-                    { name: 'Moradia', isEssential: true },
-                    { name: 'Lazer', isEssential: false },
-                    { name: 'Salário', isEssential: false }
-                ];
-            }
-            updateCategorySelect();
-        }
-        
-        async function saveCategories() {
-            if (!userId) return;
-            const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, "categories");
-            await setDoc(docRef, { list: categories });
-            updateCategorySelect();
-        }
-
-        async function loadSettings() {
-            if (!userId) return;
-            const settingsDocRef = doc(db, `artifacts/${appId}/users/${userId}/settings/main`);
-            const docSnap = await getDoc(settingsDocRef);
-            if (docSnap.exists()) {
-                 spendingLimit = docSnap.data().spendingLimit || 1000;
-                 incomeGoal = docSnap.data().incomeGoal || 3000;
-            }
-            updateUI();
-        }
-
-        async function saveSettings() {
-            if (!userId) return;
-            const settingsDocRef = doc(db, `artifacts/${appId}/users/${userId}/settings/main`);
-            await setDoc(settingsDocRef, { spendingLimit, incomeGoal });
-        }
-
-
-        // --- LÓGICA DA UI ---
-        
-        function updateUI() {
-            if (!currentMonthTransactions) return;
             const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
             const monthlyExpense = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const monthlyBalance = monthlyIncome - monthlyExpense;
@@ -401,7 +451,7 @@
                 const colorClass = isIncome ? 'text-green-500' : 'text-red-500';
                 const iconClass = isIncome ? 'fa-arrow-up' : 'fa-arrow-down';
                 const transactionEl = document.createElement('div');
-                transactionEl.className = 'flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow';
+                transactionEl.className = 'flex items-center bg-white p-3 sm:p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow';
                 transactionEl.innerHTML = `
                     <div class="w-10 h-10 rounded-full flex items-center justify-center mr-4 ${isIncome ? 'bg-green-100' : 'bg-red-100'}">
                         <i class="fas ${iconClass} ${colorClass}"></i>
@@ -420,8 +470,8 @@
         }
         
         function renderGoals() {
+            const pendingGoals = getPendingGoals();
             goalsListEl.innerHTML = '';
-            const pendingGoals = goals.filter(g => g.status === 'pending');
             if (pendingGoals.length === 0) {
                 goalsListEl.innerHTML = '<p class="text-center text-gray-500">Nenhuma conta pendente.</p>';
                 return;
@@ -438,7 +488,7 @@
                         <p class="text-sm font-bold">${formatCurrency(g.amount)}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                         <button class="mark-paid-btn bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-green-600" data-id="${g.id}" title="${isIncome ? 'Marcar como Recebido' : 'Marcar como Pago'}">
+                         <button class="mark-paid-btn bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-green-600" data-id="${g.id}" data-type="${g.type}" data-amount="${g.amount}" data-description="${g.description}" title="${isIncome ? 'Marcar como Recebido' : 'Marcar como Pago'}">
                             <i class="fas fa-check"></i>
                         </button>
                         <button class="delete-goal-btn text-gray-400 hover:text-red-500" data-id="${g.id}" title="Deletar">
@@ -451,8 +501,7 @@
         }
         
         function renderChart(transactions) {
-            if (!chartContainer.offsetParent) return; // Don't render if tab is hidden
-            
+            if (!chartContainer.offsetParent) return;
             const expenseData = transactions
                 .filter(t => t.type === 'expense')
                 .reduce((acc, t) => {
@@ -460,19 +509,17 @@
                     acc[category] = (acc[category] || 0) + t.amount;
                     return acc;
                 }, {});
-
             const labels = Object.keys(expenseData);
             const data = Object.values(expenseData);
             
             if (labels.length === 0) {
                 chartContainer.innerHTML = '<p class="text-center text-gray-500 mt-20">Sem dados de despesa para exibir neste período.</p>';
-                if(expenseChart) expenseChart.destroy();
+                if (expenseChart) expenseChart.destroy();
                 expenseChart = null;
                 return;
             } else if (!document.getElementById('expense-chart')) {
                  chartContainer.innerHTML = '<canvas id="expense-chart"></canvas>';
             }
-
             const ctx = document.getElementById('expense-chart').getContext('2d');
             
             if (expenseChart) {
@@ -481,30 +528,8 @@
                 expenseChart.update();
             } else {
                 expenseChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Gastos por Categoria',
-                            data: data,
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
-                                'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
-                            ],
-                            borderColor: 'rgba(255, 255, 255, 0.7)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            }
-                        }
-                    }
+                    type: 'pie', data: { labels, datasets: [{ label: 'Gastos por Categoria', data, backgroundColor: ['rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)', 'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)', 'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'], borderColor: 'rgba(255, 255, 255, 0.7)', borderWidth: 1 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
                 });
             }
         }
@@ -520,206 +545,140 @@
         }
         
         function updateSpendingLimitUI(monthlyExpense) {
-            const percentage = Math.min((monthlyExpense / spendingLimit) * 100, 100);
+            const percentage = spendingLimit > 0 ? Math.min((monthlyExpense / spendingLimit) * 100, 100) : 0;
             spendingBar.style.width = `${percentage}%`;
             spendingBarPreview.style.width = `${percentage}%`;
-            
-            if (percentage > 90) spendingBar.classList.replace('bg-yellow-500', 'bg-red-500');
-            else if (percentage > 70) spendingBar.classList.replace('bg-blue-500', 'bg-yellow-500');
-            else spendingBar.classList.replace('bg-yellow-500', 'bg-blue-500');
-
+            if (percentage > 90) spendingBar.className = 'bg-red-500 h-4 rounded-full';
+            else if (percentage > 70) spendingBar.className = 'bg-yellow-500 h-4 rounded-full';
+            else spendingBar.className = 'bg-blue-500 h-4 rounded-full';
             spendingText.textContent = formatCurrency(monthlyExpense);
             limitText.textContent = `de ${formatCurrency(spendingLimit)}`;
             spendingPreviewText.textContent = `Limite: ${formatCurrency(spendingLimit)}`;
         }
 
         function updateIncomeGoalUI(monthlyIncome) {
-            const percentage = Math.min((monthlyIncome / incomeGoal) * 100, 100);
+            const percentage = incomeGoal > 0 ? Math.min((monthlyIncome / incomeGoal) * 100, 100) : 0;
             incomeGoalBar.style.width = `${percentage}%`;
             incomeGoalText.textContent = `${formatCurrency(monthlyIncome)} de ${formatCurrency(incomeGoal)}`;
         }
 
-        // --- MANIPULADORES DE EVENTOS ---
-        
-        form.addEventListener('submit', async (e) => {
+        // --- EVENT HANDLERS ---
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
-            if (!userId) return;
-            const newTransaction = {
-                description: document.getElementById('description').value,
-                amount: parseFloat(document.getElementById('amount').value),
-                date: document.getElementById('date').value,
-                type: document.querySelector('input[name="type"]:checked').value,
-                category: categorySelect.value,
-                createdAt: new Date().toISOString()
-            };
-            if (newTransaction.description && !isNaN(newTransaction.amount) && newTransaction.date) {
-                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), newTransaction);
-                form.reset();
-                document.getElementById('date').value = new Date().toISOString().split('T')[0];
-                Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Transação adicionada.', showConfirmButton: false, timer: 1500 });
-            }
+            const stmt = db.prepare("INSERT INTO transactions (description, amount, date, type, category) VALUES (?, ?, ?, ?, ?)");
+            stmt.run([
+                document.getElementById('description').value,
+                parseFloat(document.getElementById('amount').value),
+                document.getElementById('date').value,
+                document.querySelector('input[name="type"]:checked').value,
+                categorySelect.value
+            ]);
+            stmt.free();
+            saveDatabase();
+            form.reset();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Transação adicionada.', showConfirmButton: false, timer: 1500 });
+            updateUI();
         });
 
         transactionsListEl.addEventListener('click', async (e) => {
-            if (e.target.closest('.delete-btn')) {
-                const btn = e.target.closest('.delete-btn');
-                const id = btn.getAttribute('data-id');
-                const result = await Swal.fire({
-                    title: 'Você tem certeza?', text: "Você não poderá reverter isso!", icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!'
-                });
+            const btn = e.target.closest('.delete-btn');
+            if (btn) {
+                const id = btn.dataset.id;
+                const result = await Swal.fire({ title: 'Você tem certeza?', text: "Você não poderá reverter isso!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!' });
                 if (result.isConfirmed) {
-                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/transactions`, id));
+                    db.run("DELETE FROM transactions WHERE id = ?", [id]);
+                    saveDatabase();
+                    updateUI();
                 }
             }
         });
         
-        async function createTransactionFromGoal(goal) {
-            const newTransaction = {
-                description: goal.description,
-                amount: goal.amount,
-                date: new Date().toISOString().split('T')[0],
-                type: goal.type,
-                category: goal.category || 'Outros',
-                createdAt: new Date().toISOString()
-            };
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), newTransaction);
-            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/goals`, goal.id), { status: 'completed' });
-            Swal.fire('Sucesso!', 'Conta baixada e transação criada!', 'success');
-        }
-
         goalsListEl.addEventListener('click', async (e) => {
             const paidBtn = e.target.closest('.mark-paid-btn');
             const deleteBtn = e.target.closest('.delete-goal-btn');
 
             if (paidBtn) {
-                const id = paidBtn.getAttribute('data-id');
-                const goal = goals.find(g => g.id === id);
-                if (!goal) return;
-
-                if (goal.type === 'income') {
-                    const result = await Swal.fire({
-                        title: 'Confirmar Recebimento?',
-                        text: `Você recebeu o valor de ${formatCurrency(goal.amount)} referente a "${goal.description}"?`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#28a745',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Sim, recebi!',
-                        cancelButtonText: 'Ainda não'
-                    });
-                    if (result.isConfirmed) {
-                        await createTransactionFromGoal(goal);
-                    }
-                } else { // It's an expense
-                    const result = await Swal.fire({
-                        title: 'Confirmar Pagamento?',
-                        text: `Deseja registrar o pagamento de "${goal.description}"?`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#28a745',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Sim, paguei!',
-                        cancelButtonText: 'Cancelar'
-                    });
-                    if (result.isConfirmed) {
-                        await createTransactionFromGoal(goal);
-                    }
+                const { id, type, amount, description } = paidBtn.dataset;
+                const confirmationText = type === 'income' ? 'Confirmar Recebimento?' : 'Confirmar Pagamento?';
+                const confirmationDetails = type === 'income' ? `Você recebeu ${formatCurrency(parseFloat(amount))} de "${description}"?` : `Registrar o pagamento de "${description}"?`;
+                const confirmButtonText = type === 'income' ? 'Sim, recebi!' : 'Sim, paguei!';
+                
+                const result = await Swal.fire({ title: confirmationText, text: confirmationDetails, icon: 'question', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d', confirmButtonText, cancelButtonText: 'Ainda não' });
+                
+                if (result.isConfirmed) {
+                    db.run("INSERT INTO transactions (description, amount, date, type, category) VALUES (?, ?, ?, ?, ?)", [description, parseFloat(amount), formatDate(new Date()), type, 'Contas']);
+                    db.run("UPDATE goals SET status = 'completed' WHERE id = ?", [id]);
+                    saveDatabase();
+                    Swal.fire('Sucesso!', 'Conta baixada e transação criada!', 'success');
+                    updateUI();
+                    renderGoals();
                 }
             } else if (deleteBtn) {
-                const id = deleteBtn.getAttribute('data-id');
-                 const result = await Swal.fire({
-                    title: 'Deletar esta conta?', text: "Esta ação não pode ser desfeita.", icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!'
-                });
+                const id = deleteBtn.dataset.id;
+                const result = await Swal.fire({ title: 'Deletar esta conta?', text: "Esta ação não pode ser desfeita.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!' });
                 if (result.isConfirmed) {
-                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/goals`, id));
+                    db.run("DELETE FROM goals WHERE id = ?", [id]);
+                    saveDatabase();
+                    renderGoals();
                 }
             }
         });
 
         editLimitBtn.addEventListener('click', async () => {
-            const { value: newLimit } = await Swal.fire({
-                title: 'Definir Limite de Gastos', input: 'number',
-                inputValue: spendingLimit, showCancelButton: true,
-                inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null
-            });
+            const { value: newLimit } = await Swal.fire({ title: 'Definir Limite de Gastos', input: 'number', inputValue: spendingLimit, showCancelButton: true, inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null });
             if (newLimit) {
                 spendingLimit = parseFloat(newLimit);
-                await saveSettings();
+                saveSettings();
                 updateUI();
                 Swal.fire('Salvo!', 'Seu novo limite foi definido.', 'success');
             }
         });
 
         editIncomeGoalBtn.addEventListener('click', async () => {
-            const { value: newGoal } = await Swal.fire({
-                title: 'Definir Meta de Renda', input: 'number',
-                inputValue: incomeGoal, showCancelButton: true,
-                inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null
-            });
+            const { value: newGoal } = await Swal.fire({ title: 'Definir Meta de Renda', input: 'number', inputValue: incomeGoal, showCancelButton: true, inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null });
             if (newGoal) {
                 incomeGoal = parseFloat(newGoal);
-                await saveSettings();
+                saveSettings();
                 updateUI();
                 Swal.fire('Salvo!', 'Sua nova meta de renda foi definida.', 'success');
             }
         });
         
         manageCategoriesBtn.addEventListener('click', async () => {
-            const renderCategoryList = () => {
-                return categories.map(c => `
-                    <div class="flex justify-between items-center p-2 border-b">
-                        <div>
-                            <input type="checkbox" class="essential-checkbox" data-category-name="${c.name}" ${c.isEssential ? 'checked' : ''} ${c.name === 'Outros' ? 'disabled' : ''}>
-                            <label class="ml-2">${c.name}</label>
-                        </div>
-                        ${c.name !== 'Outros' ? `<button type="button" class="delete-category-swal text-red-500" data-category-name="${c.name}"><i class="fas fa-trash"></i></button>` : ''}
-                    </div>
-                `).join('');
-            };
-
-            const { value: formValues } = await Swal.fire({
+            const renderCategoryList = (cats) => cats.map(c => `<div class="flex justify-between items-center p-2 border-b"><div><input type="checkbox" class="essential-checkbox" data-category-name="${c.name}" ${c.isEssential ? 'checked' : ''} ${c.name === 'Outros' ? 'disabled' : ''}><label class="ml-2">${c.name}</label></div>${c.name !== 'Outros' ? `<button type="button" class="delete-category-swal text-red-500" data-category-name="${c.name}"><i class="fas fa-trash"></i></button>` : ''}</div>`).join('');
+            
+            await Swal.fire({
                 title: 'Gerenciar Categorias',
-                html: `
-                    <p class="text-sm text-gray-500 mb-2">Marque as categorias consideradas essenciais.</p>
-                    <div class="flex mb-4">
-                        <input id="swal-input1" class="swal2-input" placeholder="Nova categoria">
-                        <button id="add-category-swal" type="button" class="swal2-confirm swal2-styled" style="margin-left: 10px;">Adicionar</button>
-                    </div>
-                    <div id="category-list-swal" class="mt-4 text-left max-h-48 overflow-y-auto">
-                        ${renderCategoryList()}
-                    </div>
-                `,
+                html: `<p class="text-sm text-gray-500 mb-2">Marque as categorias consideradas essenciais.</p><div class="flex mb-4"><input id="swal-input1" class="swal2-input" placeholder="Nova categoria"><button id="add-category-swal" type="button" class="swal2-confirm swal2-styled" style="margin-left: 10px;">Adicionar</button></div><div id="category-list-swal" class="mt-4 text-left max-h-48 overflow-y-auto">${renderCategoryList(categories)}</div>`,
                 focusConfirm: false,
+                willClose: () => { saveCategories(); },
                 didOpen: () => {
                     const dialog = Swal.getHtmlContainer();
+                    const updateList = () => { dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList(categories); };
                     dialog.querySelector('#add-category-swal').addEventListener('click', () => {
                         const input = dialog.querySelector('#swal-input1');
                         const newCatName = input.value.trim();
                         if (newCatName && !categories.find(c => c.name === newCatName)) {
                             categories.push({ name: newCatName, isEssential: false });
-                            dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList();
+                            updateList();
                             input.value = '';
                         }
                     });
                     dialog.addEventListener('click', (e) => {
-                        if (e.target.closest('.delete-category-swal')) {
-                            const catToDelete = e.target.closest('.delete-category-swal').dataset.categoryName;
-                            categories = categories.filter(c => c.name !== catToDelete);
-                            dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList();
+                        const deleteBtn = e.target.closest('.delete-category-swal');
+                        if (deleteBtn) {
+                            categories = categories.filter(c => c.name !== deleteBtn.dataset.categoryName);
+                            updateList();
                         }
                     });
                      dialog.addEventListener('change', (e) => {
-                        if (e.target.classList.contains('essential-checkbox')) {
-                            const catName = e.target.dataset.categoryName;
-                            const category = categories.find(c => c.name === catName);
-                            if(category) category.isEssential = e.target.checked;
+                        const checkbox = e.target.closest('.essential-checkbox');
+                        if (checkbox) {
+                            const category = categories.find(c => c.name === checkbox.dataset.categoryName);
+                            if(category) category.isEssential = checkbox.checked;
                         }
                     });
-                },
-                preConfirm: () => {
-                    saveCategories();
                 }
             });
         });
@@ -727,36 +686,24 @@
         addGoalBtn.addEventListener('click', async () => {
             const { value: formValues } = await Swal.fire({
                 title: 'Nova Conta',
-                html:
-                    '<input id="swal-desc" class="swal2-input" placeholder="Descrição">' +
-                    '<input id="swal-amount" type="number" class="swal2-input" placeholder="Valor">' +
-                    '<input id="swal-date" type="date" class="swal2-input">' +
-                    `<select id="swal-type" class="swal2-input"><option value="expense">A Pagar</option><option value="income">A Receber</option></select>`,
+                html: '<input id="swal-desc" class="swal2-input" placeholder="Descrição"><input id="swal-amount" type="number" class="swal2-input" placeholder="Valor"><input id="swal-date" type="date" class="swal2-input"><select id="swal-type" class="swal2-input"><option value="expense">A Pagar</option><option value="income">A Receber</option></select>',
                 focusConfirm: false,
-                preConfirm: () => {
-                    return {
-                        description: document.getElementById('swal-desc').value,
-                        amount: parseFloat(document.getElementById('swal-amount').value),
-                        dueDate: document.getElementById('swal-date').value,
-                        type: document.getElementById('swal-type').value
-                    }
-                }
+                preConfirm: () => ({ description: document.getElementById('swal-desc').value, amount: parseFloat(document.getElementById('swal-amount').value), dueDate: document.getElementById('swal-date').value, type: document.getElementById('swal-type').value })
             });
-
             if (formValues && formValues.description && !isNaN(formValues.amount) && formValues.dueDate) {
-                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/goals`), {
-                    ...formValues,
-                    status: 'pending'
-                });
+                db.run("INSERT INTO goals (description, amount, dueDate, type, status) VALUES (?, ?, ?, ?, 'pending')", [formValues.description, formValues.amount, formValues.dueDate, formValues.type]);
+                saveDatabase();
+                renderGoals();
             }
         });
         
-        // --- RELATÓRIOS ---
+        // --- REPORTS ---
         function populateDateSelectors() {
             const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
             const currentYear = new Date().getFullYear();
             const currentMonth = new Date().getMonth();
-
+            monthSelect.innerHTML = '';
+            yearSelect.innerHTML = '';
             for(let i = 0; i < 12; i++) {
                 const option = document.createElement('option');
                 option.value = i;
@@ -764,79 +711,61 @@
                 if(i === currentMonth) option.selected = true;
                 monthSelect.appendChild(option);
             }
-
             for(let i = currentYear; i >= currentYear - 5; i--) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
                 yearSelect.appendChild(option);
             }
-            
             monthSelect.addEventListener('change', fetchReportData);
             yearSelect.addEventListener('change', fetchReportData);
         }
 
-        async function fetchReportData() {
-            if (!userId) return;
+        function fetchReportData() {
             const year = yearSelect.value;
             const month = monthSelect.value;
-
             const startDate = new Date(year, month, 1);
             const endDate = new Date(year, parseInt(month) + 1, 0);
-
-            const transactionsCol = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
-            const q = query(transactionsCol, where("date", ">=", formatDate(startDate)), where("date", "<=", formatDate(endDate)), orderBy("date", "desc"));
-            
-            const snapshot = await getDocs(q);
-            const reportTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
+            const reportTransactions = getTransactionsForPeriod(startDate, endDate);
             renderTransactions(reportTransactions, reportTransactionsListEl, "Nenhuma transação neste período.");
             renderChart(reportTransactions);
         }
 
-        // --- AGENTE IA ---
+        // --- AI AGENT ---
         analyzeSavingsBtn.addEventListener('click', () => {
             const goalPercent = parseFloat(savingsGoalInput.value) / 100;
             if (isNaN(goalPercent) || goalPercent <= 0) {
                 Swal.fire('Meta Inválida', 'Por favor, insira uma porcentagem válida.', 'warning');
                 return;
             }
-
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const currentMonthTransactions = getTransactionsForPeriod(startOfMonth, endOfMonth);
             const totalIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            
             if (totalIncome === 0) {
                 agentResultEl.innerHTML = `<p class="font-semibold text-orange-600">Nenhuma renda registrada este mês para fazer a análise.</p>`;
                 agentResultEl.classList.remove('hidden');
                 return;
             }
-
+            
             const targetSavings = totalIncome * goalPercent;
-            const essentialExpenses = currentMonthTransactions
-                .filter(t => t.type === 'expense' && categories.find(c => c.name === t.category)?.isEssential)
-                .reduce((sum, t) => sum + t.amount, 0);
-
-            const nonEssentialExpenses = currentMonthTransactions
-                .filter(t => t.type === 'expense' && !categories.find(c => c.name === t.category)?.isEssential)
-                .reduce((sum, t) => sum + t.amount, 0);
-
+            const essentialExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && categories.find(c => c.name === t.category)?.isEssential).reduce((sum, t) => sum + t.amount, 0);
+            const nonEssentialExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && !categories.find(c => c.name === t.category)?.isEssential).reduce((sum, t) => sum + t.amount, 0);
             const currentSavings = totalIncome - essentialExpenses - nonEssentialExpenses;
             const savingsDeficit = targetSavings - currentSavings;
 
-            let resultHTML = `
-                <h4 class="font-bold text-lg mb-2">Análise da sua Saúde Financeira</h4>
-                <p><strong>Renda Mensal:</strong> ${formatCurrency(totalIncome)}</p>
-                <p><strong>Sua Meta de Economia (${(goalPercent * 100).toFixed(0)}%):</strong> ${formatCurrency(targetSavings)}</p>
-                <p><strong>Economia Atual:</strong> ${formatCurrency(currentSavings)}</p>
-                <hr class="my-3">
-            `;
+            let resultHTML = `<h4 class="font-bold text-lg mb-2">Análise da sua Saúde Financeira</h4><p><strong>Renda Mensal:</strong> ${formatCurrency(totalIncome)}</p><p><strong>Sua Meta de Economia (${(goalPercent * 100).toFixed(0)}%):</strong> ${formatCurrency(targetSavings)}</p><p><strong>Economia Atual:</strong> ${formatCurrency(currentSavings)}</p><hr class="my-3">`;
 
             if (savingsDeficit <= 0) {
                 resultHTML += `<p class="font-semibold text-green-600">🎉 Parabéns! Você está no caminho certo e já atingiu sua meta de economia este mês!</p>`;
             } else {
                 resultHTML += `<p class="font-semibold text-red-600">Para atingir sua meta, você precisa economizar mais ${formatCurrency(savingsDeficit)}.</p>`;
-                if (savingsDeficit > nonEssentialExpenses) {
-                    resultHTML += `<p class="mt-2">Sua meta de economia é muito alta ou seus gastos essenciais estão consumindo a maior parte da sua renda. Mesmo cortando todos os gastos não essenciais (${formatCurrency(nonEssentialExpenses)}), você não atingiria a meta.</p>`;
-                } else {
+                if (nonEssentialExpenses > 0 && savingsDeficit <= nonEssentialExpenses) {
                     resultHTML += `<p class="mt-2">💡 **Ação Sugerida:** Tente reduzir seus gastos não essenciais em pelo menos <strong>${formatCurrency(savingsDeficit)}</strong>. Isso representa ${((savingsDeficit / nonEssentialExpenses) * 100).toFixed(0)}% dos seus gastos não essenciais.</p>`;
+                } else {
+                     resultHTML += `<p class="mt-2">Sua meta de economia é muito alta ou seus gastos essenciais estão consumindo a maior parte da sua renda. Mesmo cortando todos os gastos não essenciais (${formatCurrency(nonEssentialExpenses)}), você não atingiria a meta.</p>`;
                 }
             }
             
@@ -847,13 +776,30 @@
                  resultHTML += `<p class="mt-3 p-2 bg-blue-100 text-blue-700 rounded-md">Para garantir sua meta, você deve se comprometer a guardar <strong>${percentToSave.toFixed(0)}%</strong> da sua renda para cobrir gastos essenciais e economias.</p>`;
              }
 
-
             agentResultEl.innerHTML = resultHTML;
             agentResultEl.classList.remove('hidden');
         });
 
+        // --- UTILITY FUNCTIONS ---
+        const tabs = document.querySelectorAll('.tab-button');
+        const panes = document.querySelectorAll('.tab-pane');
 
-        // --- FUNÇÕES UTILITÁRIAS ---
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(item => item.classList.remove('active'));
+                tab.classList.add('active');
+
+                const target = tab.getAttribute('data-tab');
+                panes.forEach(pane => {
+                    pane.classList.toggle('hidden', pane.id !== `${target}-content`);
+                });
+                
+                if (target === 'reports') {
+                    fetchReportData();
+                }
+            });
+        });
+        
         function formatCurrency(value) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
         }
@@ -862,10 +808,8 @@
             return date.toISOString().split('T')[0];
         }
 
-        // Inicialização
+        // --- INITIALIZATION ---
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
     </script>
-
 </body>
 </html>
-
