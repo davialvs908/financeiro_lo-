@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Gestor Financeiro (Local)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Biblioteca para simular o SQLite no browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-asm.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-button.active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .swal2-popup {
+            border-radius: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-2 sm:p-4 max-w-2xl">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">Meu Gestor Financeiro</h1>
+            <p class="text-gray-500 mt-2">Seus dados são salvos localmente neste navegador.</p>
+        </header>
+
+        <!-- Resumo Financeiro -->
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div>
+                <h2 class="text-sm font-medium text-gray-500">Saldo Mensal</h2>
+                <p id="monthly-balance" class="text-xl sm:text-2xl font-semibold text-blue-600">R$ 0,00</p>
+            </div>
+            <div>
+                <h2 class="text-sm font-medium text-gray-500">Receitas do Mês</h2>
+                <p id="monthly-income" class="text-xl sm:text-2xl font-semibold text-green-500">R$ 0,00</p>
+            </div>
+            <div>
+                <h2 class="text-sm font-medium text-gray-500">Despesas do Mês</h2>
+                <p id="monthly-expense" class="text-xl sm:text-2xl font-semibold text-red-500">R$ 0,00</p>
+            </div>
+        </div>
+
+        <!-- Limite de Gastos -->
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-lg font-semibold">Limite de Gastos Mensal</h2>
+                <button id="edit-limit-btn" class="text-blue-500 hover:text-blue-700 p-2">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div id="spending-bar" class="bg-blue-500 h-4 rounded-full" style="width: 0%;"></div>
+            </div>
+            <div class="flex justify-between text-sm mt-1">
+                <span id="spending-text">R$ 0,00</span>
+                <span id="limit-text">de R$ 1000,00</span>
+            </div>
+        </div>
+
+        <!-- Abas -->
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex justify-center sm:justify-start space-x-4 sm:space-x-6">
+                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500 active" data-tab="transactions">
+                        <i class="fas fa-exchange-alt mr-1 sm:mr-2"></i>Transações
+                    </button>
+                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="add">
+                        <i class="fas fa-plus-circle mr-1 sm:mr-2"></i>Adicionar
+                    </button>
+                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="tips">
+                        <i class="fas fa-lightbulb mr-1 sm:mr-2"></i>Dicas
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div id="tab-content">
+            <!-- Aba de Transações -->
+            <div id="transactions-content" class="tab-pane active">
+                <h3 class="text-xl font-semibold mb-4">Histórico do Mês</h3>
+                <div id="transactions-list" class="space-y-3">
+                     <p class="text-center text-gray-500">Nenhuma transação este mês.</p>
+                </div>
+            </div>
+
+            <!-- Aba de Adicionar -->
+            <div id="add-content" class="tab-pane hidden bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+                <form id="transaction-form">
+                    <div class="mb-4">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                        <input type="text" id="description" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Salário, Aluguel" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                        <input type="number" id="amount" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="0,00" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                        <input type="date" id="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <span class="block text-sm font-medium text-gray-700 mb-2">Tipo</span>
+                        <div class="flex gap-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="type" value="income" class="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500" checked>
+                                <span class="ml-2 text-green-600 font-medium">Receita</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="type" value="expense" class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500">
+                                <span class="ml-2 text-red-600 font-medium">Despesa</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
+                        Adicionar Transação
+                    </button>
+                </form>
+            </div>
+
+            <!-- Aba de Dicas -->
+            <div id="tips-content" class="tab-pane hidden">
+                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-yellow-500">Dica de Economia do Dia</h3>
+                    <p id="saving-tip" class="text-gray-600">Carregando dica...</p>
+                    <button id="new-tip-btn" class="mt-4 bg-blue-500 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-600">Nova Dica</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Variáveis globais
+        let db;
+        let spendingLimit = 1000;
+
+        const savingTips = [
+            "Anote todos os seus gastos, até os menores. Isso ajuda a criar consciência financeira.",
+            "Cozinhe em casa com mais frequência em vez de comer fora.",
+            "Antes de comprar algo, espere 24 horas. Isso ajuda a evitar compras por impulso.",
+            "Cancele assinaturas de serviços que você não usa com frequência.",
+            "Estabeleça metas de economia claras, como 'guardar R$ 200 por mês'.",
+            "Use lâmpadas de LED e desligue os aparelhos da tomada para economizar energia.",
+            "Compare preços em diferentes lojas antes de fazer uma compra grande.",
+            "Planeje suas refeições para a semana para evitar desperdício e gastos extras no supermercado.",
+            "Procure por opções de lazer gratuitas, como parques, praias e eventos comunitários."
+        ];
+
+        // Elementos do DOM
+        const monthlyBalanceEl = document.getElementById('monthly-balance');
+        const monthlyIncomeEl = document.getElementById('monthly-income');
+        const monthlyExpenseEl = document.getElementById('monthly-expense');
+        const transactionsListEl = document.getElementById('transactions-list');
+        const form = document.getElementById('transaction-form');
+        const spendingBar = document.getElementById('spending-bar');
+        const spendingText = document.getElementById('spending-text');
+        const limitText = document.getElementById('limit-text');
+        const editLimitBtn = document.getElementById('edit-limit-btn');
+        const savingTipEl = document.getElementById('saving-tip');
+        const newTipBtn = document.getElementById('new-tip-btn');
+
+        // --- LÓGICA DO BANCO DE DADOS SQLITE (sql.js) ---
+
+        async function initDatabase() {
+            try {
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+                });
+                
+                const savedDb = localStorage.getItem('finance_db');
+                if (savedDb) {
+                    const dbArray = JSON.parse(savedDb);
+                    db = new SQL.Database(new Uint8Array(dbArray));
+                } else {
+                    db = new SQL.Database();
+                    createTables();
+                }
+                loadSettings();
+                updateUI();
+            } catch (err) {
+                console.error("Erro ao inicializar o banco de dados:", err);
+            }
+        }
+
+        function createTables() {
+            const sql = `
+                CREATE TABLE transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    description TEXT,
+                    amount REAL,
+                    date TEXT,
+                    type TEXT
+                );
+                CREATE TABLE settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                );
+                INSERT INTO settings (key, value) VALUES ('spendingLimit', '1000');
+            `;
+            db.exec(sql);
+            saveDatabase();
+        }
+
+        function saveDatabase() {
+            const data = db.export();
+            localStorage.setItem('finance_db', JSON.stringify(Array.from(data)));
+        }
+
+        // --- FUNÇÕES DE DADOS ---
+
+        function getTransactionsForCurrentMonth() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            
+            const stmt = db.prepare("SELECT * FROM transactions WHERE date >= :start ORDER BY date DESC");
+            stmt.bind({ ':start': startOfMonth });
+            
+            let transactions = [];
+            while (stmt.step()) {
+                transactions.push(stmt.getAsObject());
+            }
+            stmt.free();
+            return transactions;
+        }
+
+        function loadSettings() {
+            try {
+                const stmt = db.prepare("SELECT value FROM settings WHERE key = 'spendingLimit'");
+                if (stmt.step()) {
+                    spendingLimit = parseFloat(stmt.get()[0]);
+                }
+                stmt.free();
+            } catch (e) {
+                // Tabela pode não existir ainda
+                console.log("Tabela de configurações não encontrada, usando padrão.");
+            }
+        }
+
+        function saveSettings() {
+            const stmt = db.prepare("UPDATE settings SET value = :val WHERE key = 'spendingLimit'");
+            stmt.run({ ':val': spendingLimit.toString() });
+            stmt.free();
+            saveDatabase();
+        }
+
+        // --- LÓGICA DA UI ---
+
+        const tabs = document.querySelectorAll('.tab-button');
+        const panes = document.querySelectorAll('.tab-pane');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(item => item.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.getAttribute('data-tab');
+                panes.forEach(pane => {
+                    pane.id === `${target}-content` ? pane.classList.remove('hidden') : pane.classList.add('hidden');
+                });
+            });
+        });
+
+        function updateUI() {
+            const transactions = getTransactionsForCurrentMonth();
+            
+            const monthlyIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const monthlyExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const monthlyBalance = monthlyIncome - monthlyExpense;
+
+            monthlyBalanceEl.textContent = formatCurrency(monthlyBalance);
+            monthlyIncomeEl.textContent = formatCurrency(monthlyIncome);
+            monthlyExpenseEl.textContent = formatCurrency(monthlyExpense);
+
+            renderTransactions(transactions);
+            updateSpendingLimitUI(monthlyExpense);
+        }
+
+        function renderTransactions(transactions) {
+            transactionsListEl.innerHTML = '';
+            if (transactions.length === 0) {
+                transactionsListEl.innerHTML = '<p class="text-center text-gray-500">Nenhuma transação este mês.</p>';
+                return;
+            }
+            transactions.forEach(t => {
+                const isIncome = t.type === 'income';
+                const sign = isIncome ? '+' : '-';
+                const colorClass = isIncome ? 'text-green-500' : 'text-red-500';
+                const iconClass = isIncome ? 'fa-arrow-up' : 'fa-arrow-down';
+                const transactionEl = document.createElement('div');
+                transactionEl.className = 'flex items-center bg-white p-3 sm:p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow';
+                transactionEl.innerHTML = `
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-4 ${isIncome ? 'bg-green-100' : 'bg-red-100'}">
+                        <i class="fas ${iconClass} ${colorClass}"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="font-semibold">${t.description}</p>
+                        <p class="text-sm text-gray-500">${new Date(t.date + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold ${colorClass}">${sign} ${formatCurrency(t.amount)}</p>
+                        <button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                transactionsListEl.appendChild(transactionEl);
+            });
+        }
+        
+        function updateSpendingLimitUI(monthlyExpense) {
+            const percentage = Math.min((monthlyExpense / spendingLimit) * 100, 100);
+            spendingBar.style.width = `${percentage}%`;
+            if (percentage > 90) spendingBar.className = 'bg-red-500 h-4 rounded-full';
+            else if (percentage > 70) spendingBar.className = 'bg-yellow-500 h-4 rounded-full';
+            else spendingBar.className = 'bg-blue-500 h-4 rounded-full';
+            spendingText.textContent = formatCurrency(monthlyExpense);
+            limitText.textContent = `de ${formatCurrency(spendingLimit)}`;
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const date = document.getElementById('date').value;
+            const type = document.querySelector('input[name="type"]:checked').value;
+
+            if (description && !isNaN(amount) && date) {
+                const stmt = db.prepare("INSERT INTO transactions (description, amount, date, type) VALUES (:desc, :amount, :date, :type)");
+                stmt.run({ ':desc': description, ':amount': amount, ':date': date, ':type': type });
+                stmt.free();
+                saveDatabase();
+                form.reset();
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Transação adicionada.', showConfirmButton: false, timer: 1500 });
+                updateUI();
+            }
+        });
+
+        transactionsListEl.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.delete-btn');
+            if (btn) {
+                const id = btn.getAttribute('data-id');
+                const result = await Swal.fire({
+                    title: 'Você tem certeza?', text: "Você não poderá reverter isso!", icon: 'warning',
+                    showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sim, deletar!', cancelButtonText: 'Cancelar'
+                });
+                if (result.isConfirmed) {
+                    const stmt = db.prepare("DELETE FROM transactions WHERE id = :id");
+                    stmt.run({ ':id': id });
+                    stmt.free();
+                    saveDatabase();
+                    Swal.fire('Deletado!', 'Sua transação foi removida.', 'success');
+                    updateUI();
+                }
+            }
+        });
+
+        editLimitBtn.addEventListener('click', async () => {
+            const { value: newLimit } = await Swal.fire({
+                title: 'Definir Limite de Gastos', input: 'number', inputLabel: 'Qual o seu limite de gastos mensal?',
+                inputValue: spendingLimit, showCancelButton: true, confirmButtonText: 'Salvar', cancelButtonText: 'Cancelar',
+                inputValidator: (value) => !value || value <= 0 ? 'Por favor, insira um valor válido!' : null
+            });
+            if (newLimit) {
+                spendingLimit = parseFloat(newLimit);
+                saveSettings();
+                updateUI();
+                Swal.fire('Salvo!', 'Seu novo limite foi definido.', 'success');
+            }
+        });
+        
+        function showNewTip() {
+            const randomIndex = Math.floor(Math.random() * savingTips.length);
+            savingTipEl.textContent = savingTips[randomIndex];
+        }
+        newTipBtn.addEventListener('click', showNewTip);
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            initDatabase();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            showNewTip();
+        });
+    </script>
+
+</body>
+</html>
