@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Gestor Financeiro (Local)</title>
+    <title>Meu Gestor Financeiro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Biblioteca para simular o SQLite no browser -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-asm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -24,33 +23,48 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div class="container mx-auto p-2 sm:p-4 max-w-2xl">
+    <div class="container mx-auto p-4 max-w-2xl">
         <header class="text-center mb-6">
-            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">Meu Gestor Financeiro</h1>
-            <p class="text-gray-500 mt-2">Seus dados são salvos localmente neste navegador.</p>
+            <h1 class="text-4xl font-bold text-blue-600">Meu Gestor Financeiro</h1>
+            <p class="text-gray-500 mt-2">Seu controle financeiro na palma da mão.</p>
         </header>
 
         <!-- Resumo Financeiro -->
-        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div>
-                <h2 class="text-sm font-medium text-gray-500">Saldo Mensal</h2>
-                <p id="monthly-balance" class="text-xl sm:text-2xl font-semibold text-blue-600">R$ 0,00</p>
+                <h2 class="text-sm font-medium text-gray-500">Saldo do Mês</h2>
+                <p id="monthly-balance" class="text-2xl font-semibold text-blue-600 mt-1">R$ 0,00</p>
             </div>
-            <div>
-                <h2 class="text-sm font-medium text-gray-500">Receitas do Mês</h2>
-                <p id="monthly-income" class="text-xl sm:text-2xl font-semibold text-green-500">R$ 0,00</p>
+            <div class="space-y-2">
+                <div class="flex justify-center items-center gap-2">
+                    <h2 class="text-sm font-medium text-gray-500">Receitas do Mês</h2>
+                     <button id="edit-income-goal-btn" class="text-blue-500 hover:text-blue-700 text-xs">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                <p id="monthly-income" class="text-2xl font-semibold text-green-500">R$ 0,00</p>
+                 <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="income-goal-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 0%;"></div>
+                </div>
+                <p id="income-goal-text" class="text-xs text-gray-500">Meta: R$ 0,00</p>
             </div>
-            <div>
-                <h2 class="text-sm font-medium text-gray-500">Despesas do Mês</h2>
-                <p id="monthly-expense" class="text-xl sm:text-2xl font-semibold text-red-500">R$ 0,00</p>
+            <div class="space-y-2">
+                 <div class="flex justify-center items-center gap-2">
+                    <h2 class="text-sm font-medium text-gray-500">Despesas do Mês</h2>
+                </div>
+                <p id="monthly-expense" class="text-2xl font-semibold text-red-500">R$ 0,00</p>
+                 <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="spending-bar-preview" class="bg-red-500 h-2.5 rounded-full" style="width: 0%;"></div>
+                </div>
+                <p id="spending-preview-text" class="text-xs text-gray-500">Limite: R$ 0,00</p>
             </div>
         </div>
 
         <!-- Limite de Gastos -->
-        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6">
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-6">
             <div class="flex justify-between items-center mb-2">
-                <h2 class="text-lg font-semibold">Limite de Gastos Mensal</h2>
-                <button id="edit-limit-btn" class="text-blue-500 hover:text-blue-700 p-2">
+                <h2 class="text-lg font-semibold">Acompanhamento do Limite de Gastos</h2>
+                <button id="edit-limit-btn" class="text-blue-500 hover:text-blue-700">
                     <i class="fas fa-edit"></i>
                 </button>
             </div>
@@ -66,15 +80,21 @@
         <!-- Abas -->
         <div class="mb-6">
             <div class="border-b border-gray-200">
-                <nav class="-mb-px flex justify-center sm:justify-start space-x-4 sm:space-x-6">
-                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500 active" data-tab="transactions">
-                        <i class="fas fa-exchange-alt mr-1 sm:mr-2"></i>Transações
+                <nav class="-mb-px flex space-x-2 sm:space-x-6 overflow-x-auto">
+                    <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500 active" data-tab="transactions">
+                        <i class="fas fa-exchange-alt mr-2"></i>Transações
                     </button>
-                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="add">
-                        <i class="fas fa-plus-circle mr-1 sm:mr-2"></i>Adicionar
+                    <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="goals">
+                        <i class="fas fa-tasks mr-2"></i>Metas e Contas
                     </button>
-                    <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="tips">
-                        <i class="fas fa-lightbulb mr-1 sm:mr-2"></i>Dicas
+                    <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="reports">
+                        <i class="fas fa-chart-pie mr-2"></i>Relatórios
+                    </button>
+                     <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="agent">
+                        <i class="fas fa-robot mr-2"></i>Agente IA
+                    </button>
+                    <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="add">
+                        <i class="fas fa-plus-circle mr-2"></i>Adicionar
                     </button>
                 </nav>
             </div>
@@ -84,14 +104,60 @@
         <div id="tab-content">
             <!-- Aba de Transações -->
             <div id="transactions-content" class="tab-pane active">
-                <h3 class="text-xl font-semibold mb-4">Histórico do Mês</h3>
+                <h3 class="text-xl font-semibold mb-4">Histórico do Mês Atual</h3>
                 <div id="transactions-list" class="space-y-3">
                      <p class="text-center text-gray-500">Nenhuma transação este mês.</p>
                 </div>
             </div>
+            
+            <!-- Aba de Metas e Contas -->
+            <div id="goals-content" class="tab-pane hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Contas a Pagar/Receber</h3>
+                    <button id="add-goal-btn" class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-600">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="goals-list" class="space-y-3">
+                     <p class="text-center text-gray-500">Nenhuma conta registrada.</p>
+                </div>
+            </div>
+            
+            <!-- Aba de Relatórios -->
+            <div id="reports-content" class="tab-pane hidden">
+                 <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Histórico e Gastos</h3>
+                        <div class="flex gap-2 mt-2 sm:mt-0">
+                            <select id="month-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
+                            <select id="year-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
+                        </div>
+                    </div>
+                    <div id="chart-container" class="relative h-64 sm:h-80 mb-6">
+                        <canvas id="expense-chart"></canvas>
+                    </div>
+                    <h4 class="text-lg font-semibold mb-2">Transações do Período</h4>
+                    <div id="report-transactions-list" class="space-y-3 max-h-60 overflow-y-auto"></div>
+                 </div>
+            </div>
+
+            <!-- Aba do Agente IA -->
+            <div id="agent-content" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4">Agente de Economia</h3>
+                    <p class="text-gray-600 mb-4">Defina sua meta de economia mensal e o agente dirá como alcançá-la com base na sua renda e despesas do mês atual.</p>
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="savings-goal-input" class="font-medium">Quero economizar:</label>
+                        <input type="number" id="savings-goal-input" class="w-24 px-3 py-2 border border-gray-300 rounded-md" placeholder="20" value="20">
+                        <span class="font-medium">% da minha renda.</span>
+                    </div>
+                    <button id="analyze-savings-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Analisar Minhas Finanças</button>
+                    <div id="agent-result" class="mt-6 p-4 bg-gray-50 rounded-lg hidden"></div>
+                </div>
+            </div>
 
             <!-- Aba de Adicionar -->
-            <div id="add-content" class="tab-pane hidden bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+            <div id="add-content" class="tab-pane hidden bg-white p-6 rounded-2xl shadow-lg">
                 <form id="transaction-form">
                     <div class="mb-4">
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
@@ -104,6 +170,15 @@
                     <div class="mb-4">
                         <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Data</label>
                         <input type="date" id="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center">
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <button type="button" id="manage-categories-btn" class="text-xs text-blue-500 hover:underline">Gerenciar</button>
+                        </div>
+                        <select id="category" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="Outros">Outros</option>
+                        </select>
                     </div>
                     <div class="mb-6">
                         <span class="block text-sm font-medium text-gray-700 mb-2">Tipo</span>
@@ -123,135 +198,68 @@
                     </button>
                 </form>
             </div>
-
-            <!-- Aba de Dicas -->
-            <div id="tips-content" class="tab-pane hidden">
-                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-                    <h3 class="text-xl font-semibold mb-4 text-yellow-500">Dica de Economia do Dia</h3>
-                    <p id="saving-tip" class="text-gray-600">Carregando dica...</p>
-                    <button id="new-tip-btn" class="mt-4 bg-blue-500 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-600">Nova Dica</button>
-                </div>
-            </div>
         </div>
+        
+        <footer class="text-center mt-8 text-sm text-gray-400">
+            <p>ID do Usuário: <span id="user-id-display"></span></p>
+        </footer>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        // Variáveis globais
-        let db;
-        let spendingLimit = 1000;
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const savingTips = [
-            "Anote todos os seus gastos, até os menores. Isso ajuda a criar consciência financeira.",
-            "Cozinhe em casa com mais frequência em vez de comer fora.",
-            "Antes de comprar algo, espere 24 horas. Isso ajuda a evitar compras por impulso.",
-            "Cancele assinaturas de serviços que você não usa com frequência.",
-            "Estabeleça metas de economia claras, como 'guardar R$ 200 por mês'.",
-            "Use lâmpadas de LED e desligue os aparelhos da tomada para economizar energia.",
-            "Compare preços em diferentes lojas antes de fazer uma compra grande.",
-            "Planeje suas refeições para a semana para evitar desperdício e gastos extras no supermercado.",
-            "Procure por opções de lazer gratuitas, como parques, praias e eventos comunitários."
-        ];
+        // Configuração do Firebase (substituído em produção)
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Inicialização do Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null;
+        let currentMonthTransactions = [];
+        let goals = [];
+        let categories = [{name: 'Outros', isEssential: false}];
+        let spendingLimit = 1000;
+        let incomeGoal = 3000;
+        let expenseChart = null;
+        let unsubscribeTransactions = null;
 
         // Elementos do DOM
         const monthlyBalanceEl = document.getElementById('monthly-balance');
         const monthlyIncomeEl = document.getElementById('monthly-income');
         const monthlyExpenseEl = document.getElementById('monthly-expense');
         const transactionsListEl = document.getElementById('transactions-list');
+        const goalsListEl = document.getElementById('goals-list');
         const form = document.getElementById('transaction-form');
         const spendingBar = document.getElementById('spending-bar');
         const spendingText = document.getElementById('spending-text');
         const limitText = document.getElementById('limit-text');
         const editLimitBtn = document.getElementById('edit-limit-btn');
-        const savingTipEl = document.getElementById('saving-tip');
-        const newTipBtn = document.getElementById('new-tip-btn');
+        const editIncomeGoalBtn = document.getElementById('edit-income-goal-btn');
+        const incomeGoalBar = document.getElementById('income-goal-bar');
+        const incomeGoalText = document.getElementById('income-goal-text');
+        const spendingBarPreview = document.getElementById('spending-bar-preview');
+        const spendingPreviewText = document.getElementById('spending-preview-text');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const categorySelect = document.getElementById('category');
+        const manageCategoriesBtn = document.getElementById('manage-categories-btn');
+        const addGoalBtn = document.getElementById('add-goal-btn');
+        const chartContainer = document.getElementById('chart-container');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+        const reportTransactionsListEl = document.getElementById('report-transactions-list');
+        const agentResultEl = document.getElementById('agent-result');
+        const analyzeSavingsBtn = document.getElementById('analyze-savings-btn');
+        const savingsGoalInput = document.getElementById('savings-goal-input');
 
-        // --- LÓGICA DO BANCO DE DADOS SQLITE (sql.js) ---
-
-        async function initDatabase() {
-            try {
-                const SQL = await initSqlJs({
-                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
-                });
-                
-                const savedDb = localStorage.getItem('finance_db');
-                if (savedDb) {
-                    const dbArray = JSON.parse(savedDb);
-                    db = new SQL.Database(new Uint8Array(dbArray));
-                } else {
-                    db = new SQL.Database();
-                    createTables();
-                }
-                loadSettings();
-                updateUI();
-            } catch (err) {
-                console.error("Erro ao inicializar o banco de dados:", err);
-            }
-        }
-
-        function createTables() {
-            const sql = `
-                CREATE TABLE transactions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    description TEXT,
-                    amount REAL,
-                    date TEXT,
-                    type TEXT
-                );
-                CREATE TABLE settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                );
-                INSERT INTO settings (key, value) VALUES ('spendingLimit', '1000');
-            `;
-            db.exec(sql);
-            saveDatabase();
-        }
-
-        function saveDatabase() {
-            const data = db.export();
-            localStorage.setItem('finance_db', JSON.stringify(Array.from(data)));
-        }
-
-        // --- FUNÇÕES DE DADOS ---
-
-        function getTransactionsForCurrentMonth() {
-            const today = new Date();
-            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            
-            const stmt = db.prepare("SELECT * FROM transactions WHERE date >= :start ORDER BY date DESC");
-            stmt.bind({ ':start': startOfMonth });
-            
-            let transactions = [];
-            while (stmt.step()) {
-                transactions.push(stmt.getAsObject());
-            }
-            stmt.free();
-            return transactions;
-        }
-
-        function loadSettings() {
-            try {
-                const stmt = db.prepare("SELECT value FROM settings WHERE key = 'spendingLimit'");
-                if (stmt.step()) {
-                    spendingLimit = parseFloat(stmt.get()[0]);
-                }
-                stmt.free();
-            } catch (e) {
-                // Tabela pode não existir ainda
-                console.log("Tabela de configurações não encontrada, usando padrão.");
-            }
-        }
-
-        function saveSettings() {
-            const stmt = db.prepare("UPDATE settings SET value = :val WHERE key = 'spendingLimit'");
-            stmt.run({ ':val': spendingLimit.toString() });
-            stmt.free();
-            saveDatabase();
-        }
-
-        // --- LÓGICA DA UI ---
-
+        // Lógica de Abas
         const tabs = document.querySelectorAll('.tab-button');
         const panes = document.querySelectorAll('.tab-pane');
 
@@ -259,32 +267,132 @@
             tab.addEventListener('click', () => {
                 tabs.forEach(item => item.classList.remove('active'));
                 tab.classList.add('active');
+
                 const target = tab.getAttribute('data-tab');
                 panes.forEach(pane => {
-                    pane.id === `${target}-content` ? pane.classList.remove('hidden') : pane.classList.add('hidden');
+                    pane.classList.toggle('hidden', pane.id !== `${target}-content`);
                 });
+                
+                if (target === 'reports') {
+                    fetchReportData();
+                }
             });
         });
 
-        function updateUI() {
-            const transactions = getTransactionsForCurrentMonth();
+        // Autenticação e Carregamento de Dados
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = userId;
+                loadInitialData();
+            } else {
+                await signInAnonymously(auth);
+            }
+        });
+        
+        async function loadInitialData() {
+            populateDateSelectors();
+            await loadSettings();
+            await loadCategories();
+            listenForCurrentMonthTransactions();
+            listenForGoals();
+        }
+
+        // --- LÓGICA DE DADOS (Firestore) ---
+
+        function listenForCurrentMonthTransactions() {
+            if (!userId) return;
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            const transactionsCol = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+            const q = query(transactionsCol, where("date", ">=", formatDate(startOfMonth)), where("date", "<=", formatDate(endOfMonth)));
             
-            const monthlyIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-            const monthlyExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            if (unsubscribeTransactions) unsubscribeTransactions();
+
+            unsubscribeTransactions = onSnapshot(q, (snapshot) => {
+                currentMonthTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                currentMonthTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                updateUI();
+            });
+        }
+        
+        function listenForGoals() {
+            if (!userId) return;
+            const goalsCol = collection(db, `artifacts/${appId}/users/${userId}/goals`);
+            const q = query(goalsCol, orderBy("dueDate"));
+            onSnapshot(q, (snapshot) => {
+                goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGoals();
+            });
+        }
+        
+        async function loadCategories() {
+            if (!userId) return;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, "categories");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().list) {
+                categories = docSnap.data().list;
+            } else {
+                 categories = [
+                    { name: 'Outros', isEssential: false },
+                    { name: 'Alimentação', isEssential: true },
+                    { name: 'Transporte', isEssential: true },
+                    { name: 'Moradia', isEssential: true },
+                    { name: 'Lazer', isEssential: false },
+                    { name: 'Salário', isEssential: false }
+                ];
+            }
+            updateCategorySelect();
+        }
+        
+        async function saveCategories() {
+            if (!userId) return;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, "categories");
+            await setDoc(docRef, { list: categories });
+            updateCategorySelect();
+        }
+
+        async function loadSettings() {
+            if (!userId) return;
+            const settingsDocRef = doc(db, `artifacts/${appId}/users/${userId}/settings/main`);
+            const docSnap = await getDoc(settingsDocRef);
+            if (docSnap.exists()) {
+                 spendingLimit = docSnap.data().spendingLimit || 1000;
+                 incomeGoal = docSnap.data().incomeGoal || 3000;
+            }
+            updateUI();
+        }
+
+        async function saveSettings() {
+            if (!userId) return;
+            const settingsDocRef = doc(db, `artifacts/${appId}/users/${userId}/settings/main`);
+            await setDoc(settingsDocRef, { spendingLimit, incomeGoal });
+        }
+
+
+        // --- LÓGICA DA UI ---
+        
+        function updateUI() {
+            if (!currentMonthTransactions) return;
+            const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const monthlyExpense = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const monthlyBalance = monthlyIncome - monthlyExpense;
 
             monthlyBalanceEl.textContent = formatCurrency(monthlyBalance);
             monthlyIncomeEl.textContent = formatCurrency(monthlyIncome);
             monthlyExpenseEl.textContent = formatCurrency(monthlyExpense);
 
-            renderTransactions(transactions);
+            renderTransactions(currentMonthTransactions, transactionsListEl, "Nenhuma transação este mês.");
             updateSpendingLimitUI(monthlyExpense);
+            updateIncomeGoalUI(monthlyIncome);
         }
 
-        function renderTransactions(transactions) {
-            transactionsListEl.innerHTML = '';
+        function renderTransactions(transactions, element, emptyMessage) {
+            element.innerHTML = '';
             if (transactions.length === 0) {
-                transactionsListEl.innerHTML = '<p class="text-center text-gray-500">Nenhuma transação este mês.</p>';
+                element.innerHTML = `<p class="text-center text-gray-500">${emptyMessage}</p>`;
                 return;
             }
             transactions.forEach(t => {
@@ -293,104 +401,471 @@
                 const colorClass = isIncome ? 'text-green-500' : 'text-red-500';
                 const iconClass = isIncome ? 'fa-arrow-up' : 'fa-arrow-down';
                 const transactionEl = document.createElement('div');
-                transactionEl.className = 'flex items-center bg-white p-3 sm:p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow';
+                transactionEl.className = 'flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow';
                 transactionEl.innerHTML = `
                     <div class="w-10 h-10 rounded-full flex items-center justify-center mr-4 ${isIncome ? 'bg-green-100' : 'bg-red-100'}">
                         <i class="fas ${iconClass} ${colorClass}"></i>
                     </div>
                     <div class="flex-grow">
                         <p class="font-semibold">${t.description}</p>
-                        <p class="text-sm text-gray-500">${new Date(t.date + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}</p>
+                        <p class="text-xs text-gray-500">${t.category || 'Outros'} - ${new Date(t.date + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}</p>
                     </div>
                     <div class="text-right">
                         <p class="font-bold ${colorClass}">${sign} ${formatCurrency(t.amount)}</p>
-                        <button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>
+                        ${element === transactionsListEl ? `<button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                 `;
-                transactionsListEl.appendChild(transactionEl);
+                element.appendChild(transactionEl);
+            });
+        }
+        
+        function renderGoals() {
+            goalsListEl.innerHTML = '';
+            const pendingGoals = goals.filter(g => g.status === 'pending');
+            if (pendingGoals.length === 0) {
+                goalsListEl.innerHTML = '<p class="text-center text-gray-500">Nenhuma conta pendente.</p>';
+                return;
+            }
+            pendingGoals.forEach(g => {
+                const isIncome = g.type === 'income';
+                const colorClass = isIncome ? 'border-l-green-500' : 'border-l-red-500';
+                const goalEl = document.createElement('div');
+                goalEl.className = `bg-white p-4 rounded-lg shadow-sm border-l-4 ${colorClass} flex justify-between items-center`;
+                goalEl.innerHTML = `
+                    <div>
+                        <p class="font-semibold">${g.description}</p>
+                        <p class="text-sm text-gray-500">Vence em: ${new Date(g.dueDate + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}</p>
+                        <p class="text-sm font-bold">${formatCurrency(g.amount)}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                         <button class="mark-paid-btn bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-green-600" data-id="${g.id}" title="${isIncome ? 'Marcar como Recebido' : 'Marcar como Pago'}">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="delete-goal-btn text-gray-400 hover:text-red-500" data-id="${g.id}" title="Deletar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                goalsListEl.appendChild(goalEl);
+            });
+        }
+        
+        function renderChart(transactions) {
+            if (!chartContainer.offsetParent) return; // Don't render if tab is hidden
+            
+            const expenseData = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((acc, t) => {
+                    const category = t.category || 'Outros';
+                    acc[category] = (acc[category] || 0) + t.amount;
+                    return acc;
+                }, {});
+
+            const labels = Object.keys(expenseData);
+            const data = Object.values(expenseData);
+            
+            if (labels.length === 0) {
+                chartContainer.innerHTML = '<p class="text-center text-gray-500 mt-20">Sem dados de despesa para exibir neste período.</p>';
+                if(expenseChart) expenseChart.destroy();
+                expenseChart = null;
+                return;
+            } else if (!document.getElementById('expense-chart')) {
+                 chartContainer.innerHTML = '<canvas id="expense-chart"></canvas>';
+            }
+
+            const ctx = document.getElementById('expense-chart').getContext('2d');
+            
+            if (expenseChart) {
+                expenseChart.data.labels = labels;
+                expenseChart.data.datasets[0].data = data;
+                expenseChart.update();
+            } else {
+                expenseChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Gastos por Categoria',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.7)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateCategorySelect() {
+            categorySelect.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                categorySelect.appendChild(option);
             });
         }
         
         function updateSpendingLimitUI(monthlyExpense) {
             const percentage = Math.min((monthlyExpense / spendingLimit) * 100, 100);
             spendingBar.style.width = `${percentage}%`;
-            if (percentage > 90) spendingBar.className = 'bg-red-500 h-4 rounded-full';
-            else if (percentage > 70) spendingBar.className = 'bg-yellow-500 h-4 rounded-full';
-            else spendingBar.className = 'bg-blue-500 h-4 rounded-full';
+            spendingBarPreview.style.width = `${percentage}%`;
+            
+            if (percentage > 90) spendingBar.classList.replace('bg-yellow-500', 'bg-red-500');
+            else if (percentage > 70) spendingBar.classList.replace('bg-blue-500', 'bg-yellow-500');
+            else spendingBar.classList.replace('bg-yellow-500', 'bg-blue-500');
+
             spendingText.textContent = formatCurrency(monthlyExpense);
             limitText.textContent = `de ${formatCurrency(spendingLimit)}`;
+            spendingPreviewText.textContent = `Limite: ${formatCurrency(spendingLimit)}`;
         }
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const description = document.getElementById('description').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const date = document.getElementById('date').value;
-            const type = document.querySelector('input[name="type"]:checked').value;
+        function updateIncomeGoalUI(monthlyIncome) {
+            const percentage = Math.min((monthlyIncome / incomeGoal) * 100, 100);
+            incomeGoalBar.style.width = `${percentage}%`;
+            incomeGoalText.textContent = `${formatCurrency(monthlyIncome)} de ${formatCurrency(incomeGoal)}`;
+        }
 
-            if (description && !isNaN(amount) && date) {
-                const stmt = db.prepare("INSERT INTO transactions (description, amount, date, type) VALUES (:desc, :amount, :date, :type)");
-                stmt.run({ ':desc': description, ':amount': amount, ':date': date, ':type': type });
-                stmt.free();
-                saveDatabase();
+        // --- MANIPULADORES DE EVENTOS ---
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userId) return;
+            const newTransaction = {
+                description: document.getElementById('description').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                date: document.getElementById('date').value,
+                type: document.querySelector('input[name="type"]:checked').value,
+                category: categorySelect.value,
+                createdAt: new Date().toISOString()
+            };
+            if (newTransaction.description && !isNaN(newTransaction.amount) && newTransaction.date) {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), newTransaction);
                 form.reset();
                 document.getElementById('date').value = new Date().toISOString().split('T')[0];
                 Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Transação adicionada.', showConfirmButton: false, timer: 1500 });
-                updateUI();
             }
         });
 
         transactionsListEl.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.delete-btn');
-            if (btn) {
+            if (e.target.closest('.delete-btn')) {
+                const btn = e.target.closest('.delete-btn');
                 const id = btn.getAttribute('data-id');
                 const result = await Swal.fire({
                     title: 'Você tem certeza?', text: "Você não poderá reverter isso!", icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sim, deletar!', cancelButtonText: 'Cancelar'
+                    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!'
                 });
                 if (result.isConfirmed) {
-                    const stmt = db.prepare("DELETE FROM transactions WHERE id = :id");
-                    stmt.run({ ':id': id });
-                    stmt.free();
-                    saveDatabase();
-                    Swal.fire('Deletado!', 'Sua transação foi removida.', 'success');
-                    updateUI();
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/transactions`, id));
+                }
+            }
+        });
+        
+        async function createTransactionFromGoal(goal) {
+            const newTransaction = {
+                description: goal.description,
+                amount: goal.amount,
+                date: new Date().toISOString().split('T')[0],
+                type: goal.type,
+                category: goal.category || 'Outros',
+                createdAt: new Date().toISOString()
+            };
+            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), newTransaction);
+            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/goals`, goal.id), { status: 'completed' });
+            Swal.fire('Sucesso!', 'Conta baixada e transação criada!', 'success');
+        }
+
+        goalsListEl.addEventListener('click', async (e) => {
+            const paidBtn = e.target.closest('.mark-paid-btn');
+            const deleteBtn = e.target.closest('.delete-goal-btn');
+
+            if (paidBtn) {
+                const id = paidBtn.getAttribute('data-id');
+                const goal = goals.find(g => g.id === id);
+                if (!goal) return;
+
+                if (goal.type === 'income') {
+                    const result = await Swal.fire({
+                        title: 'Confirmar Recebimento?',
+                        text: `Você recebeu o valor de ${formatCurrency(goal.amount)} referente a "${goal.description}"?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Sim, recebi!',
+                        cancelButtonText: 'Ainda não'
+                    });
+                    if (result.isConfirmed) {
+                        await createTransactionFromGoal(goal);
+                    }
+                } else { // It's an expense
+                    const result = await Swal.fire({
+                        title: 'Confirmar Pagamento?',
+                        text: `Deseja registrar o pagamento de "${goal.description}"?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Sim, paguei!',
+                        cancelButtonText: 'Cancelar'
+                    });
+                    if (result.isConfirmed) {
+                        await createTransactionFromGoal(goal);
+                    }
+                }
+            } else if (deleteBtn) {
+                const id = deleteBtn.getAttribute('data-id');
+                 const result = await Swal.fire({
+                    title: 'Deletar esta conta?', text: "Esta ação não pode ser desfeita.", icon: 'warning',
+                    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!'
+                });
+                if (result.isConfirmed) {
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/goals`, id));
                 }
             }
         });
 
         editLimitBtn.addEventListener('click', async () => {
             const { value: newLimit } = await Swal.fire({
-                title: 'Definir Limite de Gastos', input: 'number', inputLabel: 'Qual o seu limite de gastos mensal?',
-                inputValue: spendingLimit, showCancelButton: true, confirmButtonText: 'Salvar', cancelButtonText: 'Cancelar',
-                inputValidator: (value) => !value || value <= 0 ? 'Por favor, insira um valor válido!' : null
+                title: 'Definir Limite de Gastos', input: 'number',
+                inputValue: spendingLimit, showCancelButton: true,
+                inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null
             });
             if (newLimit) {
                 spendingLimit = parseFloat(newLimit);
-                saveSettings();
+                await saveSettings();
                 updateUI();
                 Swal.fire('Salvo!', 'Seu novo limite foi definido.', 'success');
             }
         });
-        
-        function showNewTip() {
-            const randomIndex = Math.floor(Math.random() * savingTips.length);
-            savingTipEl.textContent = savingTips[randomIndex];
-        }
-        newTipBtn.addEventListener('click', showNewTip);
 
+        editIncomeGoalBtn.addEventListener('click', async () => {
+            const { value: newGoal } = await Swal.fire({
+                title: 'Definir Meta de Renda', input: 'number',
+                inputValue: incomeGoal, showCancelButton: true,
+                inputValidator: (v) => !v || v <= 0 ? 'Insira um valor válido!' : null
+            });
+            if (newGoal) {
+                incomeGoal = parseFloat(newGoal);
+                await saveSettings();
+                updateUI();
+                Swal.fire('Salvo!', 'Sua nova meta de renda foi definida.', 'success');
+            }
+        });
+        
+        manageCategoriesBtn.addEventListener('click', async () => {
+            const renderCategoryList = () => {
+                return categories.map(c => `
+                    <div class="flex justify-between items-center p-2 border-b">
+                        <div>
+                            <input type="checkbox" class="essential-checkbox" data-category-name="${c.name}" ${c.isEssential ? 'checked' : ''} ${c.name === 'Outros' ? 'disabled' : ''}>
+                            <label class="ml-2">${c.name}</label>
+                        </div>
+                        ${c.name !== 'Outros' ? `<button type="button" class="delete-category-swal text-red-500" data-category-name="${c.name}"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>
+                `).join('');
+            };
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Gerenciar Categorias',
+                html: `
+                    <p class="text-sm text-gray-500 mb-2">Marque as categorias consideradas essenciais.</p>
+                    <div class="flex mb-4">
+                        <input id="swal-input1" class="swal2-input" placeholder="Nova categoria">
+                        <button id="add-category-swal" type="button" class="swal2-confirm swal2-styled" style="margin-left: 10px;">Adicionar</button>
+                    </div>
+                    <div id="category-list-swal" class="mt-4 text-left max-h-48 overflow-y-auto">
+                        ${renderCategoryList()}
+                    </div>
+                `,
+                focusConfirm: false,
+                didOpen: () => {
+                    const dialog = Swal.getHtmlContainer();
+                    dialog.querySelector('#add-category-swal').addEventListener('click', () => {
+                        const input = dialog.querySelector('#swal-input1');
+                        const newCatName = input.value.trim();
+                        if (newCatName && !categories.find(c => c.name === newCatName)) {
+                            categories.push({ name: newCatName, isEssential: false });
+                            dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList();
+                            input.value = '';
+                        }
+                    });
+                    dialog.addEventListener('click', (e) => {
+                        if (e.target.closest('.delete-category-swal')) {
+                            const catToDelete = e.target.closest('.delete-category-swal').dataset.categoryName;
+                            categories = categories.filter(c => c.name !== catToDelete);
+                            dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList();
+                        }
+                    });
+                     dialog.addEventListener('change', (e) => {
+                        if (e.target.classList.contains('essential-checkbox')) {
+                            const catName = e.target.dataset.categoryName;
+                            const category = categories.find(c => c.name === catName);
+                            if(category) category.isEssential = e.target.checked;
+                        }
+                    });
+                },
+                preConfirm: () => {
+                    saveCategories();
+                }
+            });
+        });
+
+        addGoalBtn.addEventListener('click', async () => {
+            const { value: formValues } = await Swal.fire({
+                title: 'Nova Conta',
+                html:
+                    '<input id="swal-desc" class="swal2-input" placeholder="Descrição">' +
+                    '<input id="swal-amount" type="number" class="swal2-input" placeholder="Valor">' +
+                    '<input id="swal-date" type="date" class="swal2-input">' +
+                    `<select id="swal-type" class="swal2-input"><option value="expense">A Pagar</option><option value="income">A Receber</option></select>`,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        description: document.getElementById('swal-desc').value,
+                        amount: parseFloat(document.getElementById('swal-amount').value),
+                        dueDate: document.getElementById('swal-date').value,
+                        type: document.getElementById('swal-type').value
+                    }
+                }
+            });
+
+            if (formValues && formValues.description && !isNaN(formValues.amount) && formValues.dueDate) {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/goals`), {
+                    ...formValues,
+                    status: 'pending'
+                });
+            }
+        });
+        
+        // --- RELATÓRIOS ---
+        function populateDateSelectors() {
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth();
+
+            for(let i = 0; i < 12; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = months[i];
+                if(i === currentMonth) option.selected = true;
+                monthSelect.appendChild(option);
+            }
+
+            for(let i = currentYear; i >= currentYear - 5; i--) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                yearSelect.appendChild(option);
+            }
+            
+            monthSelect.addEventListener('change', fetchReportData);
+            yearSelect.addEventListener('change', fetchReportData);
+        }
+
+        async function fetchReportData() {
+            if (!userId) return;
+            const year = yearSelect.value;
+            const month = monthSelect.value;
+
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, parseInt(month) + 1, 0);
+
+            const transactionsCol = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+            const q = query(transactionsCol, where("date", ">=", formatDate(startDate)), where("date", "<=", formatDate(endDate)), orderBy("date", "desc"));
+            
+            const snapshot = await getDocs(q);
+            const reportTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            renderTransactions(reportTransactions, reportTransactionsListEl, "Nenhuma transação neste período.");
+            renderChart(reportTransactions);
+        }
+
+        // --- AGENTE IA ---
+        analyzeSavingsBtn.addEventListener('click', () => {
+            const goalPercent = parseFloat(savingsGoalInput.value) / 100;
+            if (isNaN(goalPercent) || goalPercent <= 0) {
+                Swal.fire('Meta Inválida', 'Por favor, insira uma porcentagem válida.', 'warning');
+                return;
+            }
+
+            const totalIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            if (totalIncome === 0) {
+                agentResultEl.innerHTML = `<p class="font-semibold text-orange-600">Nenhuma renda registrada este mês para fazer a análise.</p>`;
+                agentResultEl.classList.remove('hidden');
+                return;
+            }
+
+            const targetSavings = totalIncome * goalPercent;
+            const essentialExpenses = currentMonthTransactions
+                .filter(t => t.type === 'expense' && categories.find(c => c.name === t.category)?.isEssential)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const nonEssentialExpenses = currentMonthTransactions
+                .filter(t => t.type === 'expense' && !categories.find(c => c.name === t.category)?.isEssential)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const currentSavings = totalIncome - essentialExpenses - nonEssentialExpenses;
+            const savingsDeficit = targetSavings - currentSavings;
+
+            let resultHTML = `
+                <h4 class="font-bold text-lg mb-2">Análise da sua Saúde Financeira</h4>
+                <p><strong>Renda Mensal:</strong> ${formatCurrency(totalIncome)}</p>
+                <p><strong>Sua Meta de Economia (${(goalPercent * 100).toFixed(0)}%):</strong> ${formatCurrency(targetSavings)}</p>
+                <p><strong>Economia Atual:</strong> ${formatCurrency(currentSavings)}</p>
+                <hr class="my-3">
+            `;
+
+            if (savingsDeficit <= 0) {
+                resultHTML += `<p class="font-semibold text-green-600">🎉 Parabéns! Você está no caminho certo e já atingiu sua meta de economia este mês!</p>`;
+            } else {
+                resultHTML += `<p class="font-semibold text-red-600">Para atingir sua meta, você precisa economizar mais ${formatCurrency(savingsDeficit)}.</p>`;
+                if (savingsDeficit > nonEssentialExpenses) {
+                    resultHTML += `<p class="mt-2">Sua meta de economia é muito alta ou seus gastos essenciais estão consumindo a maior parte da sua renda. Mesmo cortando todos os gastos não essenciais (${formatCurrency(nonEssentialExpenses)}), você não atingiria a meta.</p>`;
+                } else {
+                    resultHTML += `<p class="mt-2">💡 **Ação Sugerida:** Tente reduzir seus gastos não essenciais em pelo menos <strong>${formatCurrency(savingsDeficit)}</strong>. Isso representa ${((savingsDeficit / nonEssentialExpenses) * 100).toFixed(0)}% dos seus gastos não essenciais.</p>`;
+                }
+            }
+            
+            const percentToSave = ((essentialExpenses + targetSavings) / totalIncome) * 100;
+             if (percentToSave > 100) {
+                 resultHTML += `<p class="mt-3 p-2 bg-red-100 text-red-700 rounded-md"><strong>Atenção:</strong> Seus gastos essenciais somados à sua meta de economia ultrapassam sua renda. Considere ajustar sua meta ou reavaliar seus gastos essenciais.</p>`;
+             } else {
+                 resultHTML += `<p class="mt-3 p-2 bg-blue-100 text-blue-700 rounded-md">Para garantir sua meta, você deve se comprometer a guardar <strong>${percentToSave.toFixed(0)}%</strong> da sua renda para cobrir gastos essenciais e economias.</p>`;
+             }
+
+
+            agentResultEl.innerHTML = resultHTML;
+            agentResultEl.classList.remove('hidden');
+        });
+
+
+        // --- FUNÇÕES UTILITÁRIAS ---
         function formatCurrency(value) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
         }
 
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
         // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
-            initDatabase();
-            document.getElementById('date').value = new Date().toISOString().split('T')[0];
-            showNewTip();
-        });
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
     </script>
 
 </body>
 </html>
+
