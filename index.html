@@ -127,6 +127,9 @@
                      <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="agent">
                         <i class="fas fa-robot mr-2"></i>Agente IA
                     </button>
+                    <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="categories">
+                        <i class="fas fa-tags mr-2"></i>Categorias
+                    </button>
                     <button class="tab-button py-4 px-2 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-500 hover:border-blue-500" data-tab="add">
                         <i class="fas fa-plus-circle mr-2"></i>Adicionar
                     </button>
@@ -186,6 +189,22 @@
                 </div>
             </div>
 
+             <!-- Aba de Categorias -->
+            <div id="categories-content" class="tab-pane hidden">
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4">Gerenciar Categorias</h3>
+                    <form id="category-form" class="flex flex-col sm:flex-row gap-2 mb-4">
+                        <input type="text" id="new-category-name" placeholder="Nome da nova categoria" class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <label class="flex items-center gap-2 p-2">
+                            <input type="checkbox" id="new-category-essential" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            Essencial
+                        </label>
+                        <button type="submit" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600">Adicionar</button>
+                    </form>
+                    <div id="category-list" class="space-y-2"></div>
+                </div>
+            </div>
+
             <!-- Aba de Adicionar -->
             <div id="add-content" class="tab-pane hidden bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
                 <form id="transaction-form">
@@ -202,10 +221,7 @@
                         <input type="date" id="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div class="mb-4">
-                        <div class="flex justify-between items-center">
-                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                            <button type="button" id="manage-categories-btn" class="text-xs text-blue-500 hover:underline">Gerenciar</button>
-                        </div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                         <select id="category" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
                         </select>
                     </div>
@@ -216,7 +232,7 @@
                     </div>
                     <div class="mb-6">
                         <span class="block text-sm font-medium text-gray-700 mb-2">Tipo</span>
-                        <div class="flex gap-4">
+                        <div class="flex flex-col sm:flex-row sm:gap-4 gap-y-2">
                             <label class="flex items-center">
                                 <input type="radio" name="type" value="income" class="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500" checked>
                                 <span class="ml-2 text-green-600 font-medium">Receita</span>
@@ -260,7 +276,8 @@
             where, 
             orderBy, 
             deleteDoc, 
-            updateDoc 
+            updateDoc,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // SUA CONFIGURAÇÃO DO FIREBASE VAI AQUI
@@ -277,6 +294,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // Habilitar persistência offline
+        enableIndexedDbPersistence(db)
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.log('A persistência falhou, múltiplas abas abertas.');
+                } else if (err.code == 'unimplemented') {
+                    console.log('A persistência não é suportada neste navegador.');
+                }
+            });
 
         // --- GLOBAL VARIABLES ---
         let userId = null;
@@ -314,7 +341,6 @@
         const spendingBarPreview = document.getElementById('spending-bar-preview');
         const spendingPreviewText = document.getElementById('spending-preview-text');
         const categorySelect = document.getElementById('category');
-        const manageCategoriesBtn = document.getElementById('manage-categories-btn');
         const otherCategoryWrapper = document.getElementById('other-category-wrapper');
         const otherCategoryDescriptionInput = document.getElementById('other-category-description');
         const addGoalBtn = document.getElementById('add-goal-btn');
@@ -325,6 +351,10 @@
         const agentResultEl = document.getElementById('agent-result');
         const analyzeSavingsBtn = document.getElementById('analyze-savings-btn');
         const savingsGoalInput = document.getElementById('savings-goal-input');
+        const categoryForm = document.getElementById('category-form');
+        const newCategoryNameInput = document.getElementById('new-category-name');
+        const newCategoryEssentialInput = document.getElementById('new-category-essential');
+        const categoryListEl = document.getElementById('category-list');
 
         // --- AUTH & INITIALIZATION ---
         onAuthStateChanged(auth, (user) => {
@@ -344,16 +374,32 @@
         });
 
         loginBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) {
+                Swal.fire('Atenção', 'Por favor, preencha o e-mail e a senha.', 'warning');
+                return;
+            }
             try {
-                await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+                await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
                 Swal.fire('Erro', 'Email ou senha inválidos.', 'error');
             }
         });
 
         signupBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) {
+                Swal.fire('Atenção', 'Por favor, preencha o e-mail e a senha.', 'warning');
+                return;
+            }
+            if (password.length < 6) {
+                Swal.fire('Atenção', 'A senha deve ter no mínimo 6 caracteres.', 'warning');
+                return;
+            }
             try {
-                await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+                await createUserWithEmailAndPassword(auth, email, password);
             } catch (error) {
                 Swal.fire('Erro', error.message, 'error');
             }
@@ -408,11 +454,13 @@
                  categories = [
                     { name: 'Outros', isEssential: false }, { name: 'Alimentação', isEssential: true },
                     { name: 'Transporte', isEssential: true }, { name: 'Moradia', isEssential: true },
-                    { name: 'Lazer', isEssential: false }, { name: 'Salário', isEssential: false }
+                    { name: 'Lazer', isEssential: false }, { name: 'Salário', isEssential: false },
+                    { name: 'Cabelo', isEssential: false }
                 ];
                 await saveCategories();
             }
             updateCategorySelect();
+            renderCategoryList();
         }
         
         async function saveCategories() {
@@ -420,6 +468,7 @@
             const docRef = doc(db, `users/${userId}/settings`, "categories");
             await setDoc(docRef, { list: categories });
             updateCategorySelect();
+            renderCategoryList();
         }
 
         async function loadSettings() {
@@ -562,6 +611,22 @@
             });
         }
         
+        function renderCategoryList() {
+            categoryListEl.innerHTML = '';
+            categories.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 border-b';
+                item.innerHTML = `
+                    <div>
+                        <input type="checkbox" class="essential-checkbox" data-category-name="${cat.name}" ${cat.isEssential ? 'checked' : ''} ${cat.name === 'Outros' ? 'disabled' : ''}>
+                        <label class="ml-2">${cat.name}</label>
+                    </div>
+                    ${cat.name !== 'Outros' ? `<button type="button" class="delete-category-btn text-red-500" data-category-name="${cat.name}"><i class="fas fa-trash"></i></button>` : ''}
+                `;
+                categoryListEl.appendChild(item);
+            });
+        }
+        
         function updateSpendingLimitUI(monthlyExpense) {
             const percentage = spendingLimit > 0 ? Math.min((monthlyExpense / spendingLimit) * 100, 100) : 0;
             spendingBar.style.width = `${percentage}%`;
@@ -686,42 +751,36 @@
             }
         });
         
-        manageCategoriesBtn.addEventListener('click', async () => {
-            const renderCategoryList = (cats) => cats.map(c => `<div class="flex justify-between items-center p-2 border-b"><div><input type="checkbox" class="essential-checkbox" data-category-name="${c.name}" ${c.isEssential ? 'checked' : ''} ${c.name === 'Outros' ? 'disabled' : ''}><label class="ml-2">${c.name}</label></div>${c.name !== 'Outros' ? `<button type="button" class="delete-category-swal text-red-500" data-category-name="${c.name}"><i class="fas fa-trash"></i></button>` : ''}</div>`).join('');
-            
-            await Swal.fire({
-                title: 'Gerenciar Categorias',
-                html: `<p class="text-sm text-gray-500 mb-2">Marque as categorias consideradas essenciais.</p><div class="flex mb-4"><input id="swal-input1" class="swal2-input" placeholder="Nova categoria"><button id="add-category-swal" type="button" class="swal2-confirm swal2-styled" style="margin-left: 10px;">Adicionar</button></div><div id="category-list-swal" class="mt-4 text-left max-h-48 overflow-y-auto">${renderCategoryList(categories)}</div>`,
-                focusConfirm: false,
-                willClose: () => { saveCategories(); },
-                didOpen: () => {
-                    const dialog = Swal.getHtmlContainer();
-                    const updateList = () => { dialog.querySelector('#category-list-swal').innerHTML = renderCategoryList(categories); };
-                    dialog.querySelector('#add-category-swal').addEventListener('click', () => {
-                        const input = dialog.querySelector('#swal-input1');
-                        const newCatName = input.value.trim();
-                        if (newCatName && !categories.find(c => c.name === newCatName)) {
-                            categories.push({ name: newCatName, isEssential: false });
-                            updateList();
-                            input.value = '';
-                        }
-                    });
-                    dialog.addEventListener('click', (e) => {
-                        const deleteBtn = e.target.closest('.delete-category-swal');
-                        if (deleteBtn) {
-                            categories = categories.filter(c => c.name !== deleteBtn.dataset.categoryName);
-                            updateList();
-                        }
-                    });
-                     dialog.addEventListener('change', (e) => {
-                        const checkbox = e.target.closest('.essential-checkbox');
-                        if (checkbox) {
-                            const category = categories.find(c => c.name === checkbox.dataset.categoryName);
-                            if(category) category.isEssential = checkbox.checked;
-                        }
-                    });
+        categoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newCatName = newCategoryNameInput.value.trim();
+            if (newCatName && !categories.find(c => c.name === newCatName)) {
+                categories.push({ name: newCatName, isEssential: newCategoryEssentialInput.checked });
+                await saveCategories();
+                newCategoryNameInput.value = '';
+                newCategoryEssentialInput.checked = false;
+            }
+        });
+
+        categoryListEl.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-category-btn');
+            if (deleteBtn) {
+                const catToDelete = deleteBtn.dataset.categoryName;
+                categories = categories.filter(c => c.name !== catToDelete);
+                await saveCategories();
+            }
+        });
+
+        categoryListEl.addEventListener('change', async (e) => {
+            const checkbox = e.target.closest('.essential-checkbox');
+            if (checkbox) {
+                const catName = checkbox.dataset.categoryName;
+                const category = categories.find(c => c.name === catName);
+                if (category) {
+                    category.isEssential = checkbox.checked;
+                    await saveCategories();
                 }
-            });
+            }
         });
 
         addGoalBtn.addEventListener('click', async () => {
