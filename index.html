@@ -169,8 +169,24 @@
                     <div id="chart-container" class="relative h-64 sm:h-80 mb-6">
                         <canvas id="expense-chart"></canvas>
                     </div>
+                    <div id="report-summary" class="grid grid-cols-3 gap-4 text-center mb-6 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-500">Receitas</h4>
+                            <p id="report-income" class="text-lg font-semibold text-green-500">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-500">Despesas</h4>
+                            <p id="report-expense" class="text-lg font-semibold text-red-500">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-500">Saldo</h4>
+                            <p id="report-balance" class="text-lg font-semibold text-blue-600">R$ 0,00</p>
+                        </div>
+                    </div>
                     <h4 class="text-lg font-semibold mb-2">Transações do Período</h4>
                     <div id="report-transactions-list" class="space-y-3 max-h-60 overflow-y-auto"></div>
+                    <h4 class="text-lg font-semibold mt-8 mb-2">Resumo Anual</h4>
+                    <div id="yearly-summary-container" class="max-h-60 overflow-y-auto"></div>
                  </div>
             </div>
 
@@ -313,6 +329,7 @@
         let spendingLimit = 1000;
         let incomeGoal = 3000;
         let expenseChart = null;
+        let agentChart = null;
         let unsubscribeTransactions = null;
         let unsubscribeGoals = null;
 
@@ -348,6 +365,8 @@
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
         const reportTransactionsListEl = document.getElementById('report-transactions-list');
+        const reportSummaryEl = document.getElementById('report-summary');
+        const yearlySummaryContainer = document.getElementById('yearly-summary-container');
         const agentResultEl = document.getElementById('agent-result');
         const analyzeSavingsBtn = document.getElementById('analyze-savings-btn');
         const savingsGoalInput = document.getElementById('savings-goal-input');
@@ -527,9 +546,14 @@
                         <p class="font-semibold">${t.description}</p>
                         <p class="text-xs text-gray-500">${t.category || 'Outros'} - ${new Date(t.date + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex items-center gap-2">
                         <p class="font-bold ${colorClass}">${sign} ${formatCurrency(t.amount)}</p>
-                        ${element === transactionsListEl ? `<button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>` : ''}
+                        ${element === reportTransactionsListEl ? `
+                            <button class="edit-btn text-xs text-gray-400 hover:text-blue-500" data-id="${t.id}"><i class="fas fa-edit"></i></button>
+                            <button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>
+                        ` : `
+                            <button class="delete-btn text-xs text-gray-400 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash-alt"></i></button>
+                        `}
                     </div>
                 `;
                 element.appendChild(transactionEl);
@@ -832,9 +856,98 @@
             const snapshot = await getDocs(q);
             const reportTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
+            const periodIncome = reportTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const periodExpense = reportTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            document.getElementById('report-income').textContent = formatCurrency(periodIncome);
+            document.getElementById('report-expense').textContent = formatCurrency(periodExpense);
+            document.getElementById('report-balance').textContent = formatCurrency(periodIncome - periodExpense);
+            
             renderTransactions(reportTransactions, reportTransactionsListEl, "Nenhuma transação neste período.");
             renderChart(reportTransactions);
+            generateYearlySummary(year);
         }
+
+        async function generateYearlySummary(year) {
+            if (!userId) return;
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31);
+            const transactionsCol = collection(db, `users/${userId}/transactions`);
+            const q = query(transactionsCol, where("date", ">=", formatDate(startDate)), where("date", "<=", formatDate(endDate)));
+            const snapshot = await getDocs(q);
+            const yearlyTransactions = snapshot.docs.map(doc => doc.data());
+
+            const summary = {};
+            for(let i=0; i<12; i++) {
+                summary[i] = { income: 0, expense: 0 };
+            }
+
+            yearlyTransactions.forEach(t => {
+                const month = new Date(t.date).getMonth();
+                if (t.type === 'income') summary[month].income += t.amount;
+                else summary[month].expense += t.amount;
+            });
+
+            const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            let tableHTML = `<div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr>
+                <th scope="col" class="py-3 px-6">Mês</th><th scope="col" class="py-3 px-6">Receitas</th>
+                <th scope="col" class="py-3 px-6">Despesas</th><th scope="col" class="py-3 px-6">Saldo</th>
+                </tr></thead><tbody>`;
+            
+            for(let i=0; i<12; i++) {
+                const monthData = summary[i];
+                const balance = monthData.income - monthData.expense;
+                const balanceColor = balance >= 0 ? 'text-green-600' : 'text-red-600';
+                tableHTML += `<tr class="bg-white border-b">
+                    <th scope="row" class="py-4 px-6 font-medium text-gray-900 whitespace-nowrap">${months[i]}</th>
+                    <td class="py-4 px-6 text-green-600">${formatCurrency(monthData.income)}</td>
+                    <td class="py-4 px-6 text-red-600">${formatCurrency(monthData.expense)}</td>
+                    <td class="py-4 px-6 font-bold ${balanceColor}">${formatCurrency(balance)}</td>
+                </tr>`;
+            }
+            tableHTML += `</tbody></table></div>`;
+            yearlySummaryContainer.innerHTML = tableHTML;
+        }
+
+        reportTransactionsListEl.addEventListener('click', async (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+
+            if (editBtn && userId) {
+                const id = editBtn.dataset.id;
+                const docRef = doc(db, `users/${userId}/transactions`, id);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) return;
+                const t = docSnap.data();
+
+                const { value: formValues } = await Swal.fire({
+                    title: 'Editar Transação',
+                    html:
+                        `<input id="swal-desc" class="swal2-input" placeholder="Descrição" value="${t.description}">` +
+                        `<input id="swal-amount" type="number" class="swal2-input" placeholder="Valor" value="${t.amount}">` +
+                        `<input id="swal-date" type="date" class="swal2-input" value="${t.date}">`,
+                    focusConfirm: false,
+                    preConfirm: () => ({
+                        description: document.getElementById('swal-desc').value,
+                        amount: parseFloat(document.getElementById('swal-amount').value),
+                        date: document.getElementById('swal-date').value,
+                    })
+                });
+
+                if (formValues && formValues.description && !isNaN(formValues.amount) && formValues.date) {
+                    await updateDoc(docRef, formValues);
+                    fetchReportData(); // Refresh report view
+                    Swal.fire('Salvo!', 'Sua transação foi atualizada.', 'success');
+                }
+            } else if (deleteBtn && userId) {
+                 const id = deleteBtn.dataset.id;
+                const result = await Swal.fire({ title: 'Você tem certeza?', text: "Você não poderá reverter isso!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, deletar!' });
+                if (result.isConfirmed) {
+                    await deleteDoc(doc(db, `users/${userId}/transactions`, id));
+                    fetchReportData(); // Refresh report view
+                }
+            }
+        });
 
         // --- AI AGENT ---
         analyzeSavingsBtn.addEventListener('click', () => {
